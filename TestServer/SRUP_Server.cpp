@@ -12,11 +12,13 @@
 SRUP_Server::SRUP_Server(const char *id, const char *host, int port, int QOS) : mosquittopp(id)
 {
     mqtt_active = true;
+    seqid = 0;
+    rec_seqid = 0;
 
     Response_Timeout = 4 * 60; // SRUP RESPONSE timeout - 60 seconds.
 
-    keyfile=NULL;
-    pvkeyfile=NULL;
+    keyfile = NULL;
+    pvkeyfile = NULL;
 
     int keepalive = DEFAULT_KEEP_ALIVE;
     connect(host, port, keepalive);
@@ -63,49 +65,64 @@ void SRUP_Server::on_message(const struct mosquitto_message *message)
                     {
                         BOOST_LOG_TRIVIAL(info) << "Message Type: SRUP_MESSAGE_TYPE_RESPONSE";
                         BOOST_LOG_TRIVIAL(info) << "Token: " << msg_response->token();
-
-                        std::string tkn(msg_response->token());
-                        unsigned char sts = *msg_response->status();
-
-                        // To be extra defensive we could also check to see if the token is in the list before adding it...
-                        // but in normal use this can't happen...
-                        response_list.insert(std::pair<std::string, unsigned char>(tkn, sts));
-
-                        if (*msg_response->status() == SRUP::UPDATE::SRUP_UPDATE_SUCCESS)
-                            BOOST_LOG_TRIVIAL(info) << "SRUP_UPDATE_SUCCESS";
+                        uint64_t rsid;
+                        rsid = *msg_response->sequenceID();
+                        if (rsid < rec_seqid)
+                        {
+                            // We have received an invalid sequenceID... so this is probably a replay attack...
+                            // So we should ignore this message - and log the details...
+                            BOOST_LOG_TRIVIAL(warning) << "SRUP_MESSAGE_TYPE_RESPONSE message has invalid Sequence ID "
+                                                       << rsid << " Expected > " << rec_seqid;
+                            delete(msg_response);
+                            return;
+                        }
                         else
                         {
-                            // We don't have a SRUP_UPDATE_SUCCESS response - so first we must delete the token
-                            // from the transactions list to prevent activation...
+                            std::string tkn(msg_response->token());
+                            unsigned char sts = *msg_response->status();
 
-                            std::string transactionToken(msg_response->token());
+                            // To be extra defensive we could also check to see if the token is in the list before adding it...
+                            // but in normal use this can't happen...
+                            response_list.insert(std::pair<std::string, unsigned char>(tkn, sts));
 
-                            std::map<std::string, std::string>::iterator iter = transactions_list.find(transactionToken);
-                            if (iter != transactions_list.end())
-                                transactions_list.erase(transactionToken);
+                            if (*msg_response->status() == SRUP::UPDATE::SRUP_UPDATE_SUCCESS)
+                                BOOST_LOG_TRIVIAL(info) << "SRUP_UPDATE_SUCCESS";
                             else
                             {
-                                BOOST_LOG_TRIVIAL(warning)
-                                    << "SRUP_MESSAGE_TYPE_RESPONSE message contained unknown token" << transactionToken;
-                            }
+                                // We don't have a SRUP_UPDATE_SUCCESS response - so first we must delete the token
+                                // from the transactions list to prevent activation...
 
-                            if (*msg_response->status() == SRUP::UPDATE::SRUP_UPDATE_FAIL_DIGEST)
-                                BOOST_LOG_TRIVIAL(info) << "SRUP_UPDATE_FAIL_DIGEST";
+                                std::string transactionToken(msg_response->token());
 
-                            else if (*msg_response->status() == SRUP::UPDATE::SRUP_UPDATE_FAIL_FILE)
-                                BOOST_LOG_TRIVIAL(info) << "SRUP_UPDATE_FAIL_FILE";
-                            else if (*msg_response->status() == SRUP::UPDATE::SRUP_UPDATE_FAIL_SERVER)
-                                BOOST_LOG_TRIVIAL(info) << "SRUP_UPDATE_FAIL_SERVER";
-                            else
-                            {
-                                // We shouldn't be able to receive any other status codes
-                                // But just in case...
-                                BOOST_LOG_TRIVIAL(error) << "SRUP_MESSAGE_TYPE_RESPONSE had invalid status code: "
-                                                         << *msg_response->status();
-                                throw -1;
+                                std::map<std::string, std::string>::iterator iter = transactions_list.find(
+                                        transactionToken);
+                                if (iter != transactions_list.end())
+                                    transactions_list.erase(transactionToken);
+                                else
+                                {
+                                    BOOST_LOG_TRIVIAL(warning)
+                                        << "SRUP_MESSAGE_TYPE_RESPONSE message contained unknown token"
+                                        << transactionToken;
+                                }
+
+                                if (*msg_response->status() == SRUP::UPDATE::SRUP_UPDATE_FAIL_DIGEST)
+                                    BOOST_LOG_TRIVIAL(info) << "SRUP_UPDATE_FAIL_DIGEST";
+
+                                else if (*msg_response->status() == SRUP::UPDATE::SRUP_UPDATE_FAIL_FILE)
+                                    BOOST_LOG_TRIVIAL(info) << "SRUP_UPDATE_FAIL_FILE";
+                                else if (*msg_response->status() == SRUP::UPDATE::SRUP_UPDATE_FAIL_SERVER)
+                                    BOOST_LOG_TRIVIAL(info) << "SRUP_UPDATE_FAIL_SERVER";
+                                else
+                                {
+                                    // We shouldn't be able to receive any other status codes
+                                    // But just in case...
+                                    BOOST_LOG_TRIVIAL(error) << "SRUP_MESSAGE_TYPE_RESPONSE had invalid status code: "
+                                                             << *msg_response->status();
+                                    throw -1;
+                                }
                             }
+                            return;
                         }
-                        return;
                     }
                     else
                     {
@@ -141,7 +158,7 @@ bool SRUP_Server::send_init_message(char *target, char *token, char *url, char *
         pub_topic = "SRUP/" + pub_topic;
 
         // Check to see if we're subscribed to the topic for the target...
-        if((std::find(topics_list.begin(), topics_list.end(), pub_topic) != topics_list.end()))
+        if ((std::find(topics_list.begin(), topics_list.end(), pub_topic) != topics_list.end()))
         {
             SRUP_MSG_INIT *msg_init;
 
@@ -153,6 +170,7 @@ bool SRUP_Server::send_init_message(char *target, char *token, char *url, char *
             msg_init->token(token);
             msg_init->url(url);
             msg_init->digest(digest);
+            msg_init->sequenceID(&seqid);
 
             // Signing the message must be the last step before serializing it...
             msg_init->Sign(pvkeyfile);
@@ -162,6 +180,9 @@ bool SRUP_Server::send_init_message(char *target, char *token, char *url, char *
 
             publish(NULL, pub_topic.c_str(), len, serial_data);
             loop_write();
+
+            // Increment the (sending) sequence ID...
+            seqid++;
 
             // Now that we have sent the INITIATE message - we should add it to the open transactions list...
             transactions_list.insert(std::pair<std::string, std::string>(token, target));
@@ -201,6 +222,7 @@ bool SRUP_Server::send_activate_message(char *token)
 
             msg_activate = new (SRUP_MSG_ACTIVATE);
             msg_activate->token(token);
+            msg_activate->sequenceID(&seqid);
 
             msg_activate->Sign(pvkeyfile);
 
@@ -209,6 +231,8 @@ bool SRUP_Server::send_activate_message(char *token)
 
             publish(NULL, ("SRUP/" + target).c_str(), len, serial_data);
             loop_write();
+
+            seqid++;
 
             transactions_list.erase(transactionToken);
             delete (msg_activate);
@@ -256,7 +280,7 @@ bool SRUP_Server::check_for_response(std::string token)
         //std::this_thread::yield();
 
         // Now sleep this thread for a quarter-second before returning - to give everything a chance to catch-up
-        std::this_thread::sleep_for (std::chrono::milliseconds(250));
+        std::this_thread::sleep_for(std::chrono::milliseconds(250));
         return false;
     }
     else

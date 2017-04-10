@@ -27,6 +27,8 @@ SRUP_Daemon::SRUP_Daemon(const char *id, const char *host, int port) : mosquitto
 {
     done = false;
     listentopic = NULL;
+    seqid = 0;
+    rec_seqid = 0;
 
     pvkeyfile = NULL;
     keyfile = NULL;
@@ -63,27 +65,58 @@ void SRUP_Daemon::on_message(const struct mosquitto_message *message)
 
                 if (msg_generic->DeSerialize(buf))
                 {
-                    char version = *msg_generic->version();
-                    if (SRUP::SRUP_VERSION == version)
-                    {
-                        msgtype = *msg_generic->msgtype();
-
-                        if (SRUP::SRUP_MESSAGE_TYPE_INITIATE == msgtype)
+                        char version = *msg_generic->version();
+                        if (SRUP::SRUP_VERSION == version)
                         {
-                            msg_init = new(SRUP_MSG_INIT);
-                            msg_init->DeSerialize(buf);
-                            SRUP_Daemon::on_SRUP_Init_message(msg_init);
-                        }
+                            msgtype = *msg_generic->msgtype();
 
-                        if (msgtype == SRUP::SRUP_MESSAGE_TYPE_ACTIVATE)
-                        {
-                            msg_activate = new (SRUP_MSG_ACTIVATE);
-                            msg_activate->DeSerialize(buf);
-                            SRUP_Daemon::on_SRUP_Activate_message(msg_activate);
+                            if (SRUP::SRUP_MESSAGE_TYPE_INITIATE == msgtype)
+                            {
+                                uint64_t rsid; // Sequence ID of message...
+                                rsid = *(msg_generic->sequenceID());
+                                if (rsid < rec_seqid)
+                                {
+                                    // If the received Sequence ID is smaller than the last SequenceID we had then
+                                    // we have an invalid Sequence ID - this is probably a replay attack...
+                                    // We should ignore and log the message...
+                                    BOOST_LOG_TRIVIAL(warning) << "Received Message has Invalid Sequence ID: " << rsid;
+                                    BOOST_LOG_TRIVIAL(warning) << "Received Message Sequence ID should be > " << rec_seqid;
+
+                                }
+                                else
+                                {
+                                    rec_seqid = rsid;
+                                    msg_init = new(SRUP_MSG_INIT);
+                                    msg_init->DeSerialize(buf);
+                                    SRUP_Daemon::on_SRUP_Init_message(msg_init);
+                                }
+                            }
+
+                            if (msgtype == SRUP::SRUP_MESSAGE_TYPE_ACTIVATE)
+                            {
+                                uint64_t rsid; // Sequence ID of message...
+                                rsid = *(msg_generic->sequenceID());
+                                if (rsid < rec_seqid)
+                                {
+                                    // If the received Sequence ID is smaller than the last SequenceID we had then
+                                    // we have an invalid Sequence ID - this is probably a replay attack...
+                                    // We should ignore and log the message...
+                                    BOOST_LOG_TRIVIAL(warning) << "Received Message has Invalid Sequence ID: " << rsid;
+                                    BOOST_LOG_TRIVIAL(warning) << "Received Message Sequence ID should be > " << rec_seqid;
+
+                                }
+                                else
+                                {
+                                    rec_seqid = rsid;
+                                    msg_activate = new (SRUP_MSG_ACTIVATE);
+                                    msg_activate->DeSerialize(buf);
+                                    SRUP_Daemon::on_SRUP_Activate_message(msg_activate);
+                                }
+                            }
                         }
+                        else
+                            BOOST_LOG_TRIVIAL(warning) << "Invalid SRUP Version";
                     }
-                    else
-                        BOOST_LOG_TRIVIAL(warning) << "Invalid SRUP Version";
                 }
                 else
                     BOOST_LOG_TRIVIAL(error) << "SRUP Message did not deserialize";
@@ -201,6 +234,7 @@ void SRUP_Daemon::on_SRUP_Init_message(SRUP_MSG_INIT *msg_init)
         BOOST_LOG_TRIVIAL(info) << "Token: " << msg_init->token();
         BOOST_LOG_TRIVIAL(info) << "URL: " << msg_init->url();
         BOOST_LOG_TRIVIAL(info) << "Digest: " << msg_init->digest();
+        BOOST_LOG_TRIVIAL(info) << "SeqID: " << msg_init->sequenceID();
 
         // Now we'll use the Fetcher Thrift Service to get the file...
         boost::shared_ptr<TSocket> socket(new TSocket("localhost", 9091));
@@ -230,6 +264,7 @@ void SRUP_Daemon::on_SRUP_Init_message(SRUP_MSG_INIT *msg_init)
         msg_response = new (SRUP_MSG_RESPONSE);
 
         msg_response->token(msg_init->token());
+        msg_response->sequenceID(&seqid);
 
         if (rv == SRUP::FETCHER::FETCHER_RETURN_OK)
         {
@@ -266,13 +301,16 @@ void SRUP_Daemon::on_SRUP_Init_message(SRUP_MSG_INIT *msg_init)
 
         publish(NULL, listentopic, len, serial_data);
 
+        // Now we must increment the sequence ID...
+        seqid++;
+
         // Don't forget to clean up!
         delete (msg_init);
         delete (msg_response);
     }
     else
     {
-        BOOST_LOG_TRIVIAL(warning) << "Operation Failed – SRUP INIT Message did not Verify";
+        BOOST_LOG_TRIVIAL(warning) << "Operation Failed - SRUP INIT Message did not Verify";
     }
     return;
 }

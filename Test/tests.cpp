@@ -26,7 +26,7 @@ public:
 
     unsigned char* r_serial_data;
     unsigned char* s_serial_data;
-    int sz;
+    size_t sz;
 
     SRUP_MSG_INIT *msg_init;
     SRUP_MSG_INIT *msg_init2;
@@ -39,6 +39,8 @@ public:
     char* pvkeyfile;
     char* pbkeyfile;
 
+    uint64_t* sequence_ID;
+
 protected:
 
     virtual void TearDown()
@@ -50,6 +52,7 @@ protected:
         delete(digest);
         delete(pvkeyfile);
         delete(pbkeyfile);
+        delete(sequence_ID);
     }
 
     virtual void SetUp()
@@ -73,6 +76,9 @@ protected:
 
         pbkeyfile = new char[std::strlen(PBKEY)];
         std::strcpy(pbkeyfile, PBKEY);
+
+        sequence_ID = new uint64_t;
+        *sequence_ID = 1ULL;
     }
 
 };
@@ -81,6 +87,35 @@ protected:
 TEST_F(SRUP_INIT_TESTS, Sign_Blank_Message_Test)
 {
     EXPECT_FALSE(msg_init->Sign(pvkeyfile));
+}
+
+TEST_F(SRUP_INIT_TESTS, Set_Get_Sequence_ID)
+{
+    msg_init->sequenceID(sequence_ID);
+    const uint64_t *sid = msg_init->sequenceID();
+    EXPECT_TRUE(*sid == *sequence_ID);
+}
+
+TEST_F(SRUP_INIT_TESTS, Serialize_Sequence_ID)
+{
+    msg_init->sequenceID(sequence_ID);
+    msg_init->token(token);
+    msg_init->target(target);
+    msg_init->url(url);
+    msg_init->digest(digest);
+
+    msg_init->Sign(pvkeyfile);
+
+    r_serial_data = msg_init->Serialized();
+    sz = msg_init->SerializedLength();
+
+    msg_init2 = new SRUP_MSG_INIT;
+    s_serial_data = new unsigned char[sz];
+    std::memcpy(s_serial_data, r_serial_data, sz);
+    msg_init2->DeSerialize(s_serial_data);
+    const uint64_t* sid2 = msg_init2->sequenceID();
+    EXPECT_TRUE(*sid2 == *sequence_ID);
+
 }
 
 TEST_F(SRUP_INIT_TESTS, Sign_Incomplete_Message_Test)
@@ -135,6 +170,7 @@ TEST_F(SRUP_INIT_TESTS, Sign_and_Verify_Message_Test)
     msg_init->target(target);
     msg_init->url(url);
     msg_init->digest(digest);
+    msg_init->sequenceID(sequence_ID);
 
     EXPECT_TRUE(msg_init->Sign(pvkeyfile));
 
@@ -145,6 +181,7 @@ TEST_F(SRUP_INIT_TESTS, Sign_and_Verify_Message_Test)
 
     expected_size+=256; // expected signature length
     expected_size+=2; // header
+    expected_size+=8; // sequence ID
     expected_size+=(2*5); // 2-byte sizes for 5 variable-length fields
     expected_size+=std::strlen(token);
     expected_size+=std::strlen(target);
@@ -183,6 +220,7 @@ TEST_F(SRUP_INIT_TESTS, Sign_and_Verify_Long_Message_Test)
     msg_init->target(test);
     msg_init->url(test);
     msg_init->digest(test);
+    msg_init->sequenceID(sequence_ID);
 
     EXPECT_TRUE(msg_init->Sign(pvkeyfile));
 
@@ -192,6 +230,7 @@ TEST_F(SRUP_INIT_TESTS, Sign_and_Verify_Long_Message_Test)
 
     expected_size+=256; // expected signature length
     expected_size+=2; // header
+    expected_size+=8; // sequenceID
     expected_size+=(2*5); // 2-byte sizes for 5 variable-length fields
     expected_size+=(4*length);
 
@@ -219,7 +258,7 @@ public:
 
     unsigned char* r_serial_data;
     unsigned char* s_serial_data;
-    int sz;
+    size_t sz;
 
     SRUP_MSG_RESPONSE *msg_resp;
     SRUP_MSG_RESPONSE *msg_resp2;
@@ -229,6 +268,8 @@ public:
     char* pvkeyfile;
     char* pbkeyfile;
 
+    uint64_t* sequence_ID;
+
 protected:
 
     virtual void TearDown()
@@ -236,6 +277,7 @@ protected:
         delete(token);
         delete(pvkeyfile);
         delete(pbkeyfile);
+        delete(sequence_ID);
     }
 
     virtual void SetUp()
@@ -250,6 +292,9 @@ protected:
 
         pbkeyfile = new char[std::strlen(PBKEY)];
         std::strcpy(pbkeyfile, PBKEY);
+
+        sequence_ID = new uint64_t;
+        *sequence_ID = 1ULL;
     }
 
 };
@@ -268,6 +313,7 @@ TEST_F(SRUP_RESP_TESTS, Sign_Incomplete_Message_Test)
 TEST_F(SRUP_RESP_TESTS, Sign_Complete_Message_Test)
 {
     msg_resp->token(token);
+    msg_resp->sequenceID(sequence_ID);
     msg_resp->status(SRUP::UPDATE::SRUP_UPDATE_SUCCESS);
     EXPECT_TRUE(msg_resp->Sign(pvkeyfile));
 
@@ -284,6 +330,7 @@ TEST_F(SRUP_RESP_TESTS, Sign_Complete_Message_Test)
 TEST_F(SRUP_RESP_TESTS, Sign_and_Verify_Message_Test)
 {
     msg_resp->token(token);
+    msg_resp->sequenceID(sequence_ID);
     msg_resp->status(SRUP::UPDATE::SRUP_UPDATE_SUCCESS);
 
     EXPECT_TRUE(msg_resp->Sign(pvkeyfile));
@@ -295,6 +342,7 @@ TEST_F(SRUP_RESP_TESTS, Sign_and_Verify_Message_Test)
 
     expected_size+=256; // expected signature length
     expected_size+=2; // header
+    expected_size+=8; // sequence ID
     expected_size+=(2*2); // 2-byte sizes for 2 variable-length fields
     expected_size+=1; // status
     expected_size+=std::strlen(token);
@@ -306,6 +354,8 @@ TEST_F(SRUP_RESP_TESTS, Sign_and_Verify_Message_Test)
     std::memcpy(s_serial_data, r_serial_data, sz);
 
     EXPECT_TRUE(msg_resp2->DeSerialize(s_serial_data));
+    const uint64_t* sid = msg_resp2->sequenceID();
+    EXPECT_TRUE(*sid == *sequence_ID);
     EXPECT_TRUE(msg_resp2->Verify(pbkeyfile));
 
     // Alter the token...
@@ -324,7 +374,7 @@ public:
 
     unsigned char* r_serial_data;
     unsigned char* s_serial_data;
-    int sz;
+    size_t sz;
 
     SRUP_MSG_ACTIVATE *msg_activate;
     SRUP_MSG_ACTIVATE *msg_activate2;
@@ -334,6 +384,8 @@ public:
     char* pvkeyfile;
     char* pbkeyfile;
 
+    uint64_t* sequence_ID;
+
 protected:
 
     virtual void TearDown()
@@ -341,6 +393,7 @@ protected:
         delete(token);
         delete(pvkeyfile);
         delete(pbkeyfile);
+        delete(sequence_ID);
     }
 
     virtual void SetUp()
@@ -355,6 +408,10 @@ protected:
 
         pbkeyfile = new char[std::strlen(PBKEY)];
         std::strcpy(pbkeyfile, PBKEY);
+
+        sequence_ID = new uint64_t;
+        *sequence_ID = 1ULL;
+
     }
 
 };
@@ -367,12 +424,14 @@ TEST_F(SRUP_ACTIVATE_TESTS, Sign_Blank_Message_Test)
 TEST_F(SRUP_ACTIVATE_TESTS, Sign_Complete_Message_Test)
 {
     msg_activate->token(token);
+    msg_activate->sequenceID(sequence_ID);
     EXPECT_TRUE(msg_activate->Sign(pvkeyfile));
 }
 
 TEST_F(SRUP_ACTIVATE_TESTS, Sign_and_Verify_Message_Test)
 {
     msg_activate->token(token);
+    msg_activate->sequenceID(sequence_ID);
 
     EXPECT_TRUE(msg_activate->Sign(pvkeyfile));
 
@@ -383,6 +442,7 @@ TEST_F(SRUP_ACTIVATE_TESTS, Sign_and_Verify_Message_Test)
 
     expected_size+=256; // expected signature length
     expected_size+=2; // header
+    expected_size+=8; // sequence_ID
     expected_size+=(2*2); // 2-byte sizes for 2 variable-length fields
     expected_size+=std::strlen(token);
 
@@ -411,9 +471,16 @@ class SRUP_GENERIC_TESTS : public ::testing::Test
 public:
 
     SRUP_MSG_GENERIC *msg_generic;
+    SRUP_MSG_GENERIC *msg_generic2;
 
     char* pvkeyfile;
     char* pbkeyfile;
+    uint64_t* sequence_ID;
+
+    unsigned char* r_serial_data;
+    unsigned char* s_serial_data;
+
+    size_t sz;
 
 protected:
 
@@ -421,6 +488,7 @@ protected:
     {
         delete(pvkeyfile);
         delete(pbkeyfile);
+        delete(sequence_ID);
     }
 
     virtual void SetUp()
@@ -432,9 +500,38 @@ protected:
 
         pbkeyfile = new char[std::strlen(PBKEY)];
         std::strcpy(pbkeyfile, PBKEY);
+
+        sequence_ID = new uint64_t;
+        *sequence_ID = 1ULL;
     }
 
 };
+
+TEST_F(SRUP_GENERIC_TESTS, MessageTypeAndSeqIDTest)
+{
+    char *x = msg_generic->msgtype();
+    EXPECT_TRUE(*x == SRUP::SRUP_MESSAGE_TYPE_GENERIC);
+
+    msg_generic->sequenceID(sequence_ID);
+    r_serial_data=msg_generic->Serialized();
+    sz = msg_generic->SerializedLength();
+
+    int expected_size=0;
+
+    expected_size+=2; // header
+    expected_size+=8; // sequence_ID
+
+    EXPECT_EQ(sz, expected_size);
+
+    msg_generic2 = new SRUP_MSG_GENERIC;
+    s_serial_data = new unsigned char[sz];
+    std::memcpy(s_serial_data, r_serial_data, sz);
+
+    EXPECT_TRUE(msg_generic2->DeSerialize(s_serial_data));
+
+    const uint64_t* sid = msg_generic2->sequenceID();
+    EXPECT_TRUE(*sid == *sequence_ID);
+}
 
 TEST_F(SRUP_GENERIC_TESTS, Sign_Generic_Message_Test)
 {
