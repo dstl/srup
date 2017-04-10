@@ -46,9 +46,6 @@ protected:
     char* listentopic;
     char* pvkeyfile;
     char* keyfile;
-    uint64_t seqid;
-    uint64_t rec_seqid;
-
     void on_SRUP_Activate_message(SRUP_MSG_ACTIVATE*);
     void on_SRUP_Init_message(SRUP_MSG_INIT*);
 };

@@ -23,7 +23,6 @@ SRUP_MSG::SRUP_MSG()
     m_token = nullptr;
     m_serialized = nullptr;
     m_unsigned_message = nullptr;
-    m_sequence_ID = nullptr;
 }
 
 SRUP_MSG::~SRUP_MSG()
@@ -42,8 +41,6 @@ SRUP_MSG::~SRUP_MSG()
 
     if (m_serialized != nullptr)
         delete (m_serialized);
-    if (m_sequence_ID != nullptr)
-        delete (m_sequence_ID);
 }
 
 void SRUP_MSG::encodeLength(unsigned char* LSB, unsigned char* MSB, size_t l)
@@ -141,38 +138,4 @@ bool SRUP_MSG::Verify(char *keyfile)
     Crypto.setSignature(m_signature, m_sig_len);
     Serialize(true);
     return Crypto.Verify(m_unsigned_message, m_unsigned_length, keyfile);
-}
-
-const uint64_t *SRUP_MSG::sequenceID()
-{
-    return m_sequence_ID;
-}
-
-bool SRUP_MSG::sequenceID(const uint64_t *sid)
-{
-    try
-    {
-        if (m_sequence_ID != nullptr)
-            delete(m_sequence_ID);
-
-        m_sequence_ID = new uint64_t;
-        std::memcpy(m_sequence_ID, sid, sizeof(unsigned long long int));
-    }
-    catch (...)
-    {
-        m_sequence_ID = nullptr;
-        return false;
-    }
-    return true;
-}
-
-uint8_t SRUP_MSG::getByteVal(uint64_t ull, int p)
-{
-    // Given that we have a 64-bit value – we only have 8 bits to play with...
-    if ((p<0) || (p>7))
-        return 0;
-
-    uint8_t byte_val;
-    byte_val = ull >> 8*p;
-    return byte_val;
 }

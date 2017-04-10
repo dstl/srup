@@ -20,7 +20,7 @@ bool SRUP_MSG_ACTIVATE::Serialize(bool preSign)
     // we need to know how long all of the fields are so that we can unmarshall the data at
     // the other end...
 
-    const int header_size = 10; // Two-bytes for the main header - plus 8 for the sequence ID...
+    const int header_size = 2; // Two bytes for the header...
     const int field_length_size = 2;
 
     // We need the number of variable length fields - including the m_sig_len...
@@ -45,11 +45,6 @@ bool SRUP_MSG_ACTIVATE::Serialize(bool preSign)
     // Can that ever happen?
 
     len_token = std::strlen(m_token);
-
-    // Now check that we have a sequence ID...
-    if (m_sequence_ID == nullptr)
-        return false;
-
 
     // If we're calling this as a prelude to signing / verifying then we need to exclude the signature data from the
     // serial data we generate...
@@ -77,16 +72,6 @@ bool SRUP_MSG_ACTIVATE::Serialize(bool preSign)
     p+=1;
     std::memcpy(m_serialized + p, m_msgtype, 1);
     p+=1;
-
-    // Now we need to add the Sequence ID (uint64_t)
-    // See SRUP_Init.cpp for details...
-    for (int x=0;x<8;x++)
-    {
-        uint8_t byte;
-        byte = getByteVal(*m_sequence_ID, x);
-        std::memcpy(m_serialized + p, &byte, 1);
-        p+=1;
-    }
 
     // All of the other fields need their length to be specified...
 
@@ -176,21 +161,6 @@ bool SRUP_MSG_ACTIVATE::DeSerialize(const unsigned char* serial_data)
     std::memcpy(m_msgtype, (char*) serial_data + p, 1);
     p+=1;
 
-    // Now we have to unmarshall the sequence ID...
-    uint8_t sid_bytes[8];
-    for (int x=0;x<8;x++)
-    {
-        std::memcpy(&sid_bytes[x], (uint8_t*) serial_data + p, 1);
-        ++p;
-    }
-
-    // ... then we copy them into m_sequence_ID
-    if (m_sequence_ID != nullptr)
-        delete(m_sequence_ID);
-
-    m_sequence_ID = new uint64_t;
-    std::memcpy(m_sequence_ID, sid_bytes, 8);
-
     // The next two bytes are the size of the signature...
     std::memcpy(bytes, serial_data + p, 2);
     x = decodeLength(bytes);
@@ -221,7 +191,7 @@ bool SRUP_MSG_ACTIVATE::DeSerialize(const unsigned char* serial_data)
 
 bool SRUP_MSG_ACTIVATE::DataCheck()
 {
-    if ((m_token == nullptr) && (m_sequence_ID == nullptr))
+    if (m_token == nullptr)
         return false;
     else
         return true;

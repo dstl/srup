@@ -57,8 +57,6 @@ protected:
     char* keyfile;
     std::list<std::string> topics_list;
     int QOS_Setting = 0;
-    uint64_t seqid;
-    uint64_t rec_seqid;
 
     // We want a couple of maps (dictionaries) to store a list of the transactions that we've received a response from
     // Note that we need to use std::string rather than char* as the Thrift interface to Python uses std::string
