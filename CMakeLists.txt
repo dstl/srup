@@ -14,28 +14,35 @@ find_package(Threads REQUIRED)
 
 FIND_PACKAGE(Boost 1.54 COMPONENTS log REQUIRED)
 
-set(MOSQUITTO_DIR "/Code/C/mqtt/mosquitto/mosquitto-1.4.9/")
+set(MOSQUITTO_DIR "~/Code/C/mqtt/mosquitto/mosquitto-1.4.9/")
 set(OPENSSL_DIR "/usr/local/Cellar/openssl/1.0.2h_1/")
-set(THRIFT_DIR "/usr/local/include/thrift")
 
+# Thrift not used in this version...
+#set(THRIFT_DIR "/usr/local/include/thrift")
 
-include_directories(/${MOSQUITTO_DIR}/lib/ ${MOSQUITTO_DIR}/lib/cpp/ ${CMAKE_SOURCE_DIR} ${OPENSSL_DIR}/include/ ${THRIFT_DIR} ${Boost_INCLUDE_DIR})
+# Thrift not used in this version...
+#include_directories(/${MOSQUITTO_DIR}/lib/ ${MOSQUITTO_DIR}/lib/cpp/ ${CMAKE_SOURCE_DIR} ${OPENSSL_DIR}/include/ ${THRIFT_DIR} ${Boost_INCLUDE_DIR})
+
+include_directories(/${MOSQUITTO_DIR}/lib/ ${MOSQUITTO_DIR}/lib/cpp/ ${CMAKE_SOURCE_DIR} ${OPENSSL_DIR}/include/ ${Boost_INCLUDE_DIR})
 link_directories(${MOSQUITTO_DIR}lib/cpp/ ${CMAKE_SOURCE_DIR}/build/Debug/ ${OPENSSL_DIR}/lib/ /usr/local/lib)
 
 set(LIB_SOURCE_FILES SRUP.cpp SRUP.h SRUP_Init.cpp SRUP_Init.h SRUP_Response.cpp SRUP_Response.h SRUP_Activate.cpp SRUP_Activate.h SRUP_Generic.cpp SRUP_Generic.h SRUP_Crypto.cpp SRUP_Crypto.h)
-set(DAEMON_SOURCE_FILES TestDaemon/main.cpp TestDaemon/SRUP_Daemon.cpp TestDaemon/SRUP_Daemon.h)
-set(SERVER_SOURCE_FILES TestServer/main.cpp TestServer/SRUP_Server.cpp TestServer/SRUP_Server.h)
-set(FETCHER_THRIFT_SOURCE_FILES TestDaemon/Fetcher/gen-cpp/Fetcher.cpp TestDaemon/Fetcher/gen-cpp/fetcher_types.cpp TestDaemon/Fetcher/gen-cpp/fetcher_constants.cpp)
-set(SERVER_THRIFT_SOURCE_FILES TestServer/thrift/gen-cpp/SRUP.cpp TestServer/thrift/gen-cpp/SRUP_Service_types.cpp TestServer/thrift/gen-cpp/SRUP_Service_constants.cpp)
+
+# This version removes the Daemon & Server parts
+#set(DAEMON_SOURCE_FILES TestDaemon/main.cpp TestDaemon/SRUP_Daemon.cpp TestDaemon/SRUP_Daemon.h)
+#set(SERVER_SOURCE_FILES TestServer/main.cpp TestServer/SRUP_Server.cpp TestServer/SRUP_Server.h)
+#set(FETCHER_THRIFT_SOURCE_FILES TestDaemon/Fetcher/gen-cpp/Fetcher.cpp TestDaemon/Fetcher/gen-cpp/fetcher_types.cpp TestDaemon/Fetcher/gen-cpp/fetcher_constants.cpp)
+#set(SERVER_THRIFT_SOURCE_FILES TestServer/thrift/gen-cpp/SRUP.cpp TestServer/thrift/gen-cpp/SRUP_Service_types.cpp TestServer/thrift/gen-cpp/SRUP_Service_constants.cpp)
 
 add_library(SRUP_Lib SHARED ${LIB_SOURCE_FILES})
 target_link_libraries(SRUP_Lib libcrypto.a)
 
-add_executable(SRUP_Daemon ${DAEMON_SOURCE_FILES} ${FETCHER_THRIFT_SOURCE_FILES})
-add_executable(SRUP_Server ${SERVER_SOURCE_FILES} ${SERVER_THRIFT_SOURCE_FILES})
+# This version removes the Daemon & Server parts
+#add_executable(SRUP_Daemon ${DAEMON_SOURCE_FILES} ${FETCHER_THRIFT_SOURCE_FILES})
+#add_executable(SRUP_Server ${SERVER_SOURCE_FILES} ${SERVER_THRIFT_SOURCE_FILES})
 
-target_link_libraries(SRUP_Daemon thrift libmosquittopp.1.dylib libSRUP_Lib.dylib ${Boost_LIBRARIES})
-target_link_libraries(SRUP_Server Threads::Threads thrift libmosquittopp.1.dylib libSRUP_Lib.dylib ${Boost_LIBRARIES})
+#target_link_libraries(SRUP_Daemon thrift libmosquittopp.1.dylib libSRUP_Lib.dylib ${Boost_LIBRARIES})
+#target_link_libraries(SRUP_Server Threads::Threads thrift libmosquittopp.1.dylib libSRUP_Lib.dylib ${Boost_LIBRARIES})
 
 
 project(SRUP_Tests)

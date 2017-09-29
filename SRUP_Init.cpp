@@ -11,6 +11,10 @@ SRUP_MSG_INIT::SRUP_MSG_INIT()
     m_target = nullptr;
     m_url = nullptr;
     m_digest = nullptr;
+
+    m_digest_len=0;
+    m_url_len=0;
+    m_target_len=0;
 }
 
 SRUP_MSG_INIT::~SRUP_MSG_INIT()
@@ -29,61 +33,53 @@ bool SRUP_MSG_INIT::Serialize(bool preSign)
     // we need to know how long all of the fields are so that we can unmarshall the data at
     // the other end...
 
-    const int header_size = 2; // Two bytes for the header...
-    const int field_length_size = 2;
+    const uint16_t header_size = 18; // Two-bytes for the main header - plus 8 for the sequence ID & 8 for sender_ID...
+    const uint16_t field_length_size = 2;
 
     // We need the number of variable length fields - including the m_sig_len...
     // ... this can't be const as we need to change it depending on whether or not we're in pre-sign.
     // (If we are we need to reduce it by one for the unused m_sig_len
-    int var_length_field_count = 5;
+    uint8_t var_length_field_count = 5;
 
-    size_t serial_len;
-    int p=0;
+    uint32_t serial_len;
+    uint32_t p=0;
 
-    size_t len_target;
-    size_t len_token;
-    size_t len_url;
-    size_t len_digest;
+    uint8_t * msb;
+    uint8_t * lsb;
 
-    unsigned int len_sig;
-
-    unsigned char* msb;
-    unsigned char* lsb;
-
-    msb=new unsigned char[1];
-    lsb=new unsigned char[1];
-
-    // TODO: Consider type-safe assignment to protect against sizes of elements larger than sizeof(short)?
-    // Can that ever happen?
+    msb=new uint8_t[1];
+    lsb=new uint8_t[1];
 
     // Check to see if these strings are assigned before we try to call strlen on them...
     if(m_target == nullptr || m_token == nullptr || m_url == nullptr || m_digest == nullptr)
         return false;
 
-    len_target = std::strlen(m_target);
-    len_token = std::strlen(m_token);
-    len_url = std::strlen(m_url);
-    len_digest = std::strlen(m_digest);
+    // Now check that we have a sequence ID...
+    if (m_sequence_ID == nullptr)
+        return false;
+
+    // ...and check that we have a sender ID
+    if (m_sender_ID == nullptr)
+        return false;
 
     // If we're calling this as a prelude to signing / verifying then we need to exclude the signature data from the
     // serial data we generate...
 
     if (preSign)
     {
-        len_sig = 0;
+        // Don't include the sig_len...
+        serial_len = m_target_len + m_token_len + m_url_len + m_digest_len;
         var_length_field_count--;
     }
     else
-        len_sig = m_sig_len;
-
-    serial_len = len_sig + len_target + len_token + len_url + len_digest;
+        serial_len = m_sig_len + m_target_len + m_token_len + m_url_len + m_digest_len;
 
     m_serial_length = serial_len + header_size + (field_length_size * var_length_field_count);
 
     if (m_serialized != nullptr)
         delete (m_serialized);
 
-    m_serialized = new unsigned char[m_serial_length];
+    m_serialized = new uint8_t[m_serial_length];
     std::memset(m_serialized, 0, m_serial_length);
 
     // The first two fields are fixed length (1 byte each).
@@ -91,6 +87,28 @@ bool SRUP_MSG_INIT::Serialize(bool preSign)
     p+=1;
     std::memcpy(m_serialized + p, m_msgtype, 1);
     p+=1;
+
+    // Now we need to add the Sequence ID (uint64_t)
+    // But we need to ensure that we get the correct byte-order ... or at least a consistent byte-order!
+    // Given the use of encodeLength & sending the msb first (big-endian / network byte-order) – we need to do the same
+    // Simply doing std::memcpy(m_serialized + p, m_sequence_ID, 8) – won't give us the right answer on (e.g. x86 arch)
+    // so we need to get the value one byte at a time...
+    for (int x=0;x<8;x++)
+    {
+        uint8_t byte;
+        byte = getByteVal(*m_sequence_ID, x);
+        std::memcpy(m_serialized + p, &byte, 1);
+        p+=1;
+    }
+
+    // We now do the exact same thing for the sender ID - also uint64_t...
+    for (int x=0;x<8;x++)
+    {
+        uint8_t byte;
+        byte = getByteVal(*m_sender_ID, x);
+        std::memcpy(m_serialized + p, &byte, 1);
+        p+=1;
+    }
 
     // All of the other fields need their length to be specified...
 
@@ -107,6 +125,7 @@ bool SRUP_MSG_INIT::Serialize(bool preSign)
                 return false;
             else
             {
+                // SIGNATURE...
                 encodeLength(lsb, msb, m_sig_len);
                 std::memcpy(m_serialized + p, msb, 1);
                 p += 1;
@@ -118,36 +137,40 @@ bool SRUP_MSG_INIT::Serialize(bool preSign)
         }
     }
 
-    encodeLength(lsb, msb, len_target);
+    // TARGET...
+    encodeLength(lsb, msb, m_target_len);
     std::memcpy(m_serialized + p, msb, 1);
     p+=1;
     std::memcpy(m_serialized + p, lsb, 1);
     p+=1;
-    std::memcpy(m_serialized + p, m_target, len_target);
-    p+=len_target;
+    std::memcpy(m_serialized + p, m_target, m_target_len);
+    p+=m_target_len;
 
-    encodeLength(lsb, msb, len_token);
+    // TOKEN...
+    encodeLength(lsb, msb, m_token_len);
     std::memcpy(m_serialized + p, msb, 1);
     p+=1;
     std::memcpy(m_serialized + p, lsb, 1);
     p+=1;
-    std::memcpy(m_serialized + p, m_token, len_token);
-    p+=len_token;
+    std::memcpy(m_serialized + p, m_token, m_token_len);
+    p+=m_token_len;
 
-    encodeLength(lsb, msb, len_url);
+    // URL...
+    encodeLength(lsb, msb, m_url_len);
     std::memcpy(m_serialized + p, msb, 1);
     p+=1;
     std::memcpy(m_serialized + p, lsb, 1);
     p+=1;
-    std::memcpy(m_serialized + p, m_url, len_url);
-    p+=len_url;
+    std::memcpy(m_serialized + p, m_url, m_url_len);
+    p+=m_url_len;
 
-    encodeLength(lsb, msb, len_digest);
+    // DIGEST
+    encodeLength(lsb, msb, m_digest_len);
     std::memcpy(m_serialized + p, msb, 1);
     p+=1;
     std::memcpy(m_serialized + p, lsb, 1);
     p+=1;
-    std::memcpy(m_serialized + p, m_digest, len_digest);
+    std::memcpy(m_serialized + p, m_digest, m_digest_len);
 
     delete(msb);
     delete(lsb);
@@ -172,7 +195,7 @@ bool SRUP_MSG_INIT::Serialize(bool preSign)
     return true;
 }
 
-size_t SRUP_MSG_INIT::SerializedLength()
+uint32_t SRUP_MSG_INIT::SerializedLength()
 {
     if (!m_is_serialized)
         Serialize();
@@ -190,18 +213,51 @@ unsigned char* SRUP_MSG_INIT::Serialized()
 
 bool SRUP_MSG_INIT::DeSerialize(const unsigned char* serial_data)
 {
-    unsigned short x;
-    unsigned int p=0;
-    unsigned char bytes[2];
+    uint16_t x;
+    uint32_t p=0;
+    uint8_t bytes[2];
 
     // We need to unmarshall the data to reconstruct the object...
     // We can start with the two bytes for the header.
     // One for the version - and one for the message type.
 
-    std::memcpy(m_version, (char*) serial_data, 1);
+    std::memcpy(m_version, (uint8_t*) serial_data, 1);
     p+=1;
-    std::memcpy(m_msgtype, (char*) serial_data + p, 1);
+    std::memcpy(m_msgtype, (uint8_t*) serial_data + p, 1);
     p+=1;
+
+    // Now we have to unmarshall the sequence ID...
+    // Reconstructing it from the 8x uint8_t's we have in the bytestream...
+    // First we get the 8-bytes...
+    uint8_t sid_bytes[8];
+    for (int i=0;i<8;i++)
+    {
+        std::memcpy(&sid_bytes[i], (uint8_t*) serial_data + p, 1);
+        ++p;
+    }
+
+    // ... then we copy them into m_sequence_ID
+    if (m_sequence_ID != nullptr)
+        delete(m_sequence_ID);
+    m_sequence_ID = new uint64_t;
+    std::memcpy(m_sequence_ID, sid_bytes, 8);
+
+    // Again we have to do the same trick to unmarshall the sender ID...
+    // Reconstructing it from the 8x uint8_t's we have in the bytestream...
+    uint8_t snd_bytes[8];
+    for (int i=0;i<8;i++)
+    {
+        std::memcpy(&snd_bytes[i], (uint8_t*) serial_data + p, 1);
+        ++p;
+    }
+
+    // ... then we copy them into m_sender_ID
+    if (m_sender_ID != nullptr)
+        delete(m_sender_ID);
+    m_sender_ID = new uint64_t;
+    std::memcpy(m_sender_ID, snd_bytes, 8);
+
+    // Now we've done the tricky part – we can move on to the simpler fields.
 
     // The next two bytes are the size of the signature...
     std::memcpy(bytes, serial_data + p, 2);
@@ -213,7 +269,7 @@ bool SRUP_MSG_INIT::DeSerialize(const unsigned char* serial_data)
     // The next x bytes are the value of the signature.
     if(m_signature != nullptr)
         delete(m_signature);
-    m_signature = new unsigned char[x];
+    m_signature = new uint8_t[x];
     std::memcpy(m_signature, serial_data + p, x);
 
     p+=x;
@@ -224,9 +280,9 @@ bool SRUP_MSG_INIT::DeSerialize(const unsigned char* serial_data)
     p+=2;
     if(m_target != nullptr)
         delete(m_target);
-    m_target = new char[x+1];
-    std::memcpy(m_target, (char*) serial_data + p, x);
-    *(m_target + x) = 0;
+    m_target = new uint8_t[x];
+    std::memcpy(m_target, (uint8_t*) serial_data + p, x);
+    m_target_len = x;
     p+=x;
 
     std::memcpy(bytes, serial_data + p, 2);
@@ -234,9 +290,9 @@ bool SRUP_MSG_INIT::DeSerialize(const unsigned char* serial_data)
     p+=2;
     if(m_token != nullptr)
         delete(m_token);
-    m_token = new char[x+1];
-    std::memcpy(m_token, (char*) serial_data + p, x);
-    *(m_token + x) = 0;
+    m_token = new uint8_t[x];
+    std::memcpy(m_token, (uint8_t *) serial_data + p, x);
+    m_token_len = x;
     p+=x;
 
     std::memcpy(bytes, serial_data + p, 2);
@@ -245,8 +301,9 @@ bool SRUP_MSG_INIT::DeSerialize(const unsigned char* serial_data)
     if(m_url != nullptr)
         delete(m_url);
     m_url = new char[x+1];
-    std::memcpy(m_url, (char*) serial_data + p, x);
+    std::memcpy(m_url, (uint8_t *) serial_data + p, x);
     *(m_url + x) = 0;
+    m_url_len = x;
     p+=x;
 
     std::memcpy(bytes, serial_data + p, 2);
@@ -254,28 +311,31 @@ bool SRUP_MSG_INIT::DeSerialize(const unsigned char* serial_data)
     p+=2;
     if(m_digest != nullptr)
         delete(m_digest);
-    m_digest = new char[x+1];
-    std::memcpy(m_digest, (char*) serial_data + p, x);
-    *(m_digest + x) = 0;
+    m_digest = new uint8_t[x];
+    std::memcpy(m_digest, (uint8_t *) serial_data + p, x);
+    m_digest_len = x;
 
     return true;
 }
 
-bool SRUP_MSG_INIT::target(const char* t)
+bool SRUP_MSG_INIT::target(const uint8_t * t, uint16_t len)
 {
     m_is_serialized = false;
-
-    int i;
     try
     {
-        if (m_target != nullptr)
-            delete(m_target);
+        if (len < 1)
+            return false;
+        else
+        {
+            if (m_target != nullptr)
+                delete (m_target);
 
-        i = std::strlen(t);
-        m_target = new char[i+1];
-        std::memcpy(m_target, t, i);
-        *(m_target + i) = 0;
+            m_target = new uint8_t[len];
+            std::memcpy(m_target, t, len);
+            m_target_len = len;
+        }
     }
+
     catch (...)
     {
         m_target = nullptr;
@@ -286,7 +346,7 @@ bool SRUP_MSG_INIT::target(const char* t)
 }
 
 
-char* SRUP_MSG_INIT::target()
+uint8_t * SRUP_MSG_INIT::target()
 {
     return m_target;
 }
@@ -295,16 +355,15 @@ bool SRUP_MSG_INIT::url(const char* u)
 {
     m_is_serialized = false;
 
-    int i;
     try
     {
         if (m_url != nullptr)
             delete(m_url);
 
-        i = std::strlen(u);
-        m_url = new char[i+1];
-        std::memcpy(m_url, u, i);
-        *(m_url + i) = 0;
+        m_url_len = std::strlen(u);
+        m_url = new char[m_url_len + 1];
+        std::memcpy(m_url, u, m_url_len);
+        *(m_url + m_url_len) = 0;
     }
     catch (...)
     {
@@ -320,40 +379,48 @@ char* SRUP_MSG_INIT::url()
     return m_url;
 }
 
-bool SRUP_MSG_INIT::digest(const char* d)
+bool SRUP_MSG_INIT::digest(const uint8_t * d, uint16_t len)
 {
     m_is_serialized = false;
-
-    int i;
-    try
-    {
-        if (m_digest != nullptr)
-            delete(m_digest);
-
-        i = std::strlen(d);
-        m_digest = new char[i+1];
-        std::memcpy(m_digest, d, i);
-        *(m_digest + i) = 0;
-
-    }
-    catch (...)
-    {
-        m_digest = nullptr;
+    if (len < 1)
         return false;
-    }
+    else
+    {
+        try
+        {
+            if (m_digest != nullptr)
+                delete (m_digest);
 
-    return true;
+            m_digest = new uint8_t[len];
+            std::memcpy(m_digest, d, len);
+            m_digest_len = len;
+
+        }
+        catch (...)
+        {
+            m_digest = nullptr;
+            return false;
+        }
+
+        return true;
+    }
 }
 
-char* SRUP_MSG_INIT::digest()
+uint8_t* SRUP_MSG_INIT::digest()
 {
     return m_digest;
 }
 
 bool SRUP_MSG_INIT::DataCheck()
 {
-    if((m_digest != nullptr) && (m_target != nullptr) && (m_url != nullptr) && (m_token != nullptr))
+    if((m_digest != nullptr) && (m_target != nullptr) && (m_url != nullptr) && (m_token != nullptr) && (m_sender_ID !=
+            nullptr) && (m_sequence_ID != nullptr))
         return true;
     else
         return false;
+}
+
+uint16_t SRUP_MSG_INIT::target_length()
+{
+    return m_target_len;
 }
