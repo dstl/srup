@@ -5,10 +5,10 @@ from cursesmenu.items import *
 
 
 # Define settings for the software update.
-url_a = "https://iot-lab.uk/SRUP/device_a.py"
+url_a = "https://example.com/SRUP/device_a.py"
 digest_a = "28097c1d4598115f86cc575edac4ee1879a73a2ee84b36d274218587ef36c37c"
 
-url_b = "https://iot-lab.uk/SRUP/device_b.py"
+url_b = "https://example.com/SRUP/device_b.py"
 digest_b = "cd87659f55c6eb762c2a9134623f81a8c41293d93eba656340182580e48162a0"
 
 target_id = "4fee7a2cae344c12"  # - hardware

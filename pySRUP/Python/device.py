@@ -64,7 +64,7 @@ def on_update(filename):
     os.execl(python, python, *sys.argv)
 
 
-client = pySRUP.Client("device.cfg", "https://iot-lab.uk")
+client = pySRUP.Client("device.cfg", "https://example.com")
 client.on_action(on_action)
 client.on_data(on_data)
 client.on_update(on_update)
