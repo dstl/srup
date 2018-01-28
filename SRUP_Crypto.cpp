@@ -4,6 +4,7 @@
 
 #include "SRUP_Crypto.h"
 
+
 SRUP_Crypto::SRUP_Crypto()
 {
     m_signature = nullptr;
@@ -34,17 +35,8 @@ unsigned char *SRUP_Crypto::Sign(unsigned char *data, size_t datasize, char *key
         SHA256(data, datasize, hash);
         m_signature = new unsigned char [sigsize];
 
-//        std::cout << "Signing" << std::endl << "Data: ";
-//        printdata (data, datasize);
-//        std::cout << "Data Size: " << datasize << std::endl;
-//        std::cout << "Hash: ";
-//        printdata (hash, SHA256_DIGEST_LENGTH);
-
         RSA_sign(NID_sha256, hash, SHA256_DIGEST_LENGTH, m_signature, &m_sig_length, key);
         RSA_free(key);
-
-//        std::cout << "Signature: ";
-//        printdata(m_signature, m_sig_length);
 
         return m_signature;
     }
@@ -68,7 +60,6 @@ bool SRUP_Crypto::Verify(unsigned char *data, size_t datasize, char *keyfile)
         unsigned char hash[SHA256_DIGEST_LENGTH];
         SHA256(data, datasize, hash);
 
-        // Protect against timing attacks, by turning on blinding...
         c=BN_CTX_new();
         RSA_blinding_on(key, c);
 

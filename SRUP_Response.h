@@ -9,13 +9,69 @@
 
 namespace SRUP
 {
-    static const unsigned char SRUP_MESSAGE_TYPE_RESPONSE = 0x02;
+    static const uint8_t SRUP_MESSAGE_TYPE_RESPONSE = 0x02;
     namespace UPDATE
     {
-        static const unsigned char SRUP_UPDATE_SUCCESS = 0x00;
-        static const unsigned char SRUP_UPDATE_FAIL_SERVER = 0xFD;
-        static const unsigned char SRUP_UPDATE_FAIL_FILE = 0xFE;
-        static const unsigned char SRUP_UPDATE_FAIL_DIGEST = 0xFF;
+        static const uint8_t SRUP_UPDATE_SUCCESS = 0x00;
+        static const uint8_t SRUP_UPDATE_FAIL_SERVER = 0xFD;
+        static const uint8_t SRUP_UPDATE_FAIL_FILE = 0xFE;
+        static const uint8_t SRUP_UPDATE_FAIL_DIGEST = 0xFF;
+        static const uint8_t SRUP_UPATE_FAIL_HTTP_ERROR = 0xFC;
+    }
+
+    namespace ACTIVATE
+    {
+        static const uint8_t SRUP_ACTIVATE_SUCCESS = 0x10;
+        static const uint8_t SRUP_ACTIVATE_FAIL = 0x1F;
+    }
+
+    namespace ACTION
+    {
+        static const uint8_t SRUP_ACTION_SUCCESS = 0x20;
+        static const uint8_t SRUP_ACTION_UKNOWN = 0x2E;
+        static const uint8_t SRUP_ACTION_FAIL = 0x2F;
+    }
+
+    namespace DATA
+    {
+        static const uint8_t SRUP_DATA_TYPE_UKNOWN = 0x3F;
+    }
+
+    namespace GROUP
+    {
+        static const uint8_t SRUP_GROUP_ADD_SUCCESS = 0x40;
+        static const uint8_t SRUP_GROUP_DEL_SUCCESS = 0x41;
+        static const uint8_t SRUP_GROUP_DEL_INVALID = 0x4C;
+        static const uint8_t SRUP_GROUP_DEL_FAIL = 0x4D;
+        static const uint8_t SRUP_GROUP_ADD_FAIL_LIMIT = 0x4E;
+        static const uint8_t SRUP_GROUP_ADD_FAIL = 0x4F;
+    }
+
+    namespace JOIN
+    {
+        static const uint8_t SRUP_JOIN_SUCCESS = 0x50;
+        static const uint8_t SRUP_JOIN_REFUSED = 0x5E;
+        static const uint8_t SRUP_JOIN_FAIL = 0x5F;
+    }
+
+    namespace OBSERVED_JOIN
+    {
+        static const uint8_t SRUP_OBSERVED_JOIN_VALID = 0x60;
+        static const uint8_t SRUP_OBSERVED_JOIN_INVALID = 0x6E;
+        static const uint8_t SRUP_OBSERVED_JOIN_FAIL = 0x6F;
+
+    }
+
+    namespace RESIGN
+    {
+        static const uint8_t SRUP_RESIGN_SUCCESS = 0x70;
+        static const uint8_t SRUP_RESIGN_FAIL = 0x7F;
+    }
+
+    namespace DEREGISTER
+    {
+        static const uint8_t SRUP_DEREGISTER_SUCCESS = 0x80;
+        static const uint8_t SRUP_DEREGISTER_FAIL = 0x8F;
     }
 }
 
@@ -28,17 +84,17 @@ public:
     SRUP_MSG_RESPONSE();
     ~SRUP_MSG_RESPONSE();
 
-    unsigned char* Serialized();
-    bool DeSerialize(const unsigned char*);
-    size_t SerializedLength();
+    uint8_t * Serialized();
+    bool DeSerialize(const uint8_t *);
+    uint32_t SerializedLength();
 
-    bool status(const unsigned char);
-    unsigned char * status();
+    bool status(const uint8_t);
+    uint8_t * status();
 
 protected:
     bool Serialize(bool optional = false);
     bool DataCheck();
-    unsigned char* m_status;
+    uint8_t* m_status;
 
 
 };

@@ -9,7 +9,7 @@
 
 namespace SRUP
 {
-    static const unsigned char SRUP_MESSAGE_TYPE_ACTIVATE = 0x03;
+    static const uint8_t SRUP_MESSAGE_TYPE_ACTIVATE = 0x03;
 }
 
 // Lastly we have the SRUP_MSG_ACTIVATE
@@ -24,8 +24,8 @@ public:
     ~SRUP_MSG_ACTIVATE();
 
     unsigned char* Serialized();
-    bool DeSerialize(const unsigned char*);
-    size_t SerializedLength();
+    bool DeSerialize(const uint8_t *);
+    uint32_t SerializedLength();
 
 protected:
     bool Serialize(bool optional = false);

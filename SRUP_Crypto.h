@@ -5,6 +5,7 @@
 #ifndef SRUP_SRUP_CRYPTO_H
 #define SRUP_SRUP_CRYPTO_H
 
+#include <cstdio>
 #include <cstring>
 #include <openssl/pem.h>
 #include <openssl/rsa.h>

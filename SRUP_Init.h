@@ -9,7 +9,7 @@
 
 namespace SRUP
 {
-    static const unsigned char SRUP_MESSAGE_TYPE_INITIATE = 0x01;
+    static const uint8_t SRUP_MESSAGE_TYPE_INITIATE = 0x01;
 }
 
 // The SRUP_MSG_INIT message type adds the device UUID (target), as well as the URL of the data file & its digest.
@@ -22,21 +22,27 @@ public:
     SRUP_MSG_INIT();
     ~SRUP_MSG_INIT();
 
-    unsigned char* Serialized();
-    bool DeSerialize(const unsigned char*);
-    size_t SerializedLength();
+    uint8_t* Serialized();
+    bool DeSerialize(const uint8_t*);
+    uint32_t SerializedLength();
 
-    bool target(const char*);
-    char* target();
-    bool url(const char*);
+    bool target(const uint64_t*);
+    uint64_t* target();
+    bool url(const char*, uint16_t);
     char* url();
-    bool digest(const char*);
+    uint16_t url_length();
+    bool digest(const char*, uint16_t);
     char* digest();
+    uint16_t digest_length();
 
 protected:
-    char* m_target;
+    uint64_t* m_target;
+
     char* m_url;
     char* m_digest;
+
+    uint16_t m_url_len;
+    uint16_t m_digest_len;
 
     bool Serialize(bool optional = false);
     bool DataCheck();

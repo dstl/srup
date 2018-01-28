@@ -7,10 +7,15 @@
 
 
 #include "SRUP.h"
+#include "SRUP_Init.h"
+#include "SRUP_Data.h"
+#include "SRUP_Activate.h"
+#include "SRUP_Response.h"
+#include "SRUP_Action.h"
 
 namespace SRUP
 {
-    static const unsigned char SRUP_MESSAGE_TYPE_GENERIC = 0x00;
+    static const uint8_t SRUP_MESSAGE_TYPE_GENERIC = 0x00;
 }
 
 // This is a proxy for the base-class - we only implement the version & type...
@@ -27,7 +32,7 @@ public:
 
     unsigned char* Serialized();
     bool DeSerialize(const unsigned char*);
-    size_t SerializedLength();
+    uint32_t SerializedLength();
 
 protected:
     bool Serialize(bool optional = false);
