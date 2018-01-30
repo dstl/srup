@@ -13,7 +13,7 @@ Both libSRUP & the pySRUP Python library are in development and as such the proc
 
 If you want to run the C++ unit tests you'll need to install the google test suite into the `Test/lib` directory…  Otherwise you should comment out the test section of `CMakeLists.txt`
 
-## Building on Rapberry Pi
+## Building on Raspberry Pi
 
 Note that a small change is required when building on Raspbian on a Raspberry Pi. A version of the `CMakeLists.txt` file with the neccessary changes is included as `CMakeLists.rpi.txt`; the original `CMakeLists.txt` should be removed, and this new version should be renamed as `CMakeLists.txt`.
 
