@@ -46,7 +46,7 @@ uint8_t srup_response_status_update_fail_digest(SRUP_MSG_RESPONSE& self)
 
 uint8_t srup_response_status_update_fail_http_error(SRUP_MSG_RESPONSE& self)
 {
-    return SRUP::UPDATE::SRUP_UPATE_FAIL_HTTP_ERROR;
+    return SRUP::UPDATE::SRUP_UPDATE_FAIL_HTTP_ERROR;
 }
 
 uint8_t srup_response_status_activate_success(SRUP_MSG_RESPONSE& self)
@@ -66,7 +66,7 @@ uint8_t srup_response_status_action_success(SRUP_MSG_RESPONSE& self)
 
 uint8_t srup_response_status_action_unknown(SRUP_MSG_RESPONSE& self)
 {
-    return SRUP::ACTION::SRUP_ACTION_UKNOWN;
+    return SRUP::ACTION::SRUP_ACTION_UNKNOWN;
 }
 
 uint8_t srup_response_status_action_fail(SRUP_MSG_RESPONSE& self)
@@ -76,36 +76,7 @@ uint8_t srup_response_status_action_fail(SRUP_MSG_RESPONSE& self)
 
 uint8_t srup_response_status_data_type_unknown(SRUP_MSG_RESPONSE& self)
 {
-    return SRUP::DATA::SRUP_DATA_TYPE_UKNOWN;
-}
-
-uint8_t srup_response_status_group_add_success(SRUP_MSG_RESPONSE& self)
-{
-    return SRUP::GROUP::SRUP_GROUP_ADD_SUCCESS;
-}
-
-uint8_t srup_response_status_group_delete_success(SRUP_MSG_RESPONSE& self)
-{
-    return SRUP::GROUP::SRUP_GROUP_DEL_SUCCESS;
-}
-uint8_t srup_response_status_group_delete_invalid(SRUP_MSG_RESPONSE& self)
-{
-    return SRUP::GROUP::SRUP_GROUP_DEL_INVALID;
-}
-
-uint8_t srup_response_status_group_delete_fail(SRUP_MSG_RESPONSE& self)
-{
-    return SRUP::GROUP::SRUP_GROUP_DEL_FAIL;
-}
-
-uint8_t srup_response_status_group_add_fail_limit(SRUP_MSG_RESPONSE& self)
-{
-    return SRUP::GROUP::SRUP_GROUP_ADD_FAIL_LIMIT;
-}
-
-uint8_t srup_response_status_group_add_fail(SRUP_MSG_RESPONSE& self)
-{
-    return SRUP::GROUP::SRUP_GROUP_ADD_FAIL;
+    return SRUP::DATA::SRUP_DATA_TYPE_UNKNOWN;
 }
 
 uint8_t srup_response_status_join_success(SRUP_MSG_RESPONSE& self)

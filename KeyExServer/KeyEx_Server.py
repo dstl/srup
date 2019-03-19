@@ -283,6 +283,30 @@ def access_keys():
         return rv()
 
 
+@application.route('/KeyEx/register/get_key/<identity>', methods=['GET'])
+def get_pub_key(identity):
+    # Given that we only need to pass one value – we won't use JSON – but rather use a simple
+    # argument...e.g. .../get_key/a3ca9020-b2dc-4d4d-bbf9-42320c7730a0
+
+    # Get the key - if we have it...
+    key_string = database_functions.get_key(DATABASE_FILE, identity)
+
+    if key_string is None:
+        # We don't have a key for this identity...
+        rv = KeyExReturn.IDNotFound()
+
+    else:
+        # We have the key - so now we need to restore the key to the full PEM format
+        # that RSA functions will expecting...
+        restored_key = KeyEx_helpers.fixkey(key_string)
+
+        # And to return this complete key to the C2 server we need to first Base64 encode it.
+        encoded_key = base64.encodebytes(restored_key.encode())
+        rv = KeyExReturn.OK(encoded_key)
+
+    return rv()
+
+
 # All of the end-points are specified now –so lastly le is add a custom error handler for the 400 status code
 # which we will use to catch malformed JSON; and use our normal approach to return the data.
 @application.errorhandler(400)

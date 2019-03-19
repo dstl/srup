@@ -39,7 +39,9 @@
 namespace SRUP
 {
     // Now we have added both the Sequence ID & Sender ID we have incremented the version to 0x03
-    static const uint8_t SRUP_VERSION = 0x03;
+    // Removal of the group messages, and of the explicit target ID in the update init message is a breaking change
+    // hence we now upgrade to a version number of 0x04...
+    static const uint8_t SRUP_VERSION = 0x04;
 }
 
 
@@ -75,8 +77,12 @@ public:
     uint16_t token_length();
     const uint8_t* token();
 
+    virtual bool SignF(char*);
+    virtual bool VerifyF(char*);
+
     virtual bool Sign(char*);
     virtual bool Verify(char*);
+
 
 protected:
     uint8_t * m_version;

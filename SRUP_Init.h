@@ -12,7 +12,7 @@ namespace SRUP
     static const uint8_t SRUP_MESSAGE_TYPE_INITIATE = 0x01;
 }
 
-// The SRUP_MSG_INIT message type adds the device UUID (target), as well as the URL of the data file & its digest.
+// The SRUP_MSG_INIT message type adds the URL of the data file & its digest.
 
 class SRUP_MSG_INIT : public  SRUP_MSG
 {
@@ -26,8 +26,6 @@ public:
     bool DeSerialize(const uint8_t*);
     uint32_t SerializedLength();
 
-    bool target(const uint64_t*);
-    uint64_t* target();
     bool url(const char*, uint16_t);
     char* url();
     uint16_t url_length();
@@ -36,8 +34,6 @@ public:
     uint16_t digest_length();
 
 protected:
-    uint64_t* m_target;
-
     char* m_url;
     char* m_digest;
 

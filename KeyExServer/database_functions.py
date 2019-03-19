@@ -45,7 +45,8 @@ def store_data(database_name, dev_id, pkey, dev_type):
         return rv
 
 
-# Here's a relatively simple function which we'll use to return the key that we have stored for the specified device ID
+# Here's a relatively simple function which we'll use to return the key that we have stored
+# for the specified device ID
 def get_key(database_name, dev_id):
     db_ret = database_connect(database_name)
 
@@ -58,6 +59,10 @@ def get_key(database_name, dev_id):
         res = c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='Devices';").fetchone()
         if res is not None:
             c.execute("SELECT device_public_key FROM Devices WHERE device = ?", (dev_id,))
-            return c.fetchone()[0]
+            data = c.fetchone()
+            if data is not None:
+                return data[0]
+            else:
+                return None
         else:
             return None

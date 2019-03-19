@@ -16,7 +16,7 @@ namespace SRUP
         static const uint8_t SRUP_UPDATE_FAIL_SERVER = 0xFD;
         static const uint8_t SRUP_UPDATE_FAIL_FILE = 0xFE;
         static const uint8_t SRUP_UPDATE_FAIL_DIGEST = 0xFF;
-        static const uint8_t SRUP_UPATE_FAIL_HTTP_ERROR = 0xFC;
+        static const uint8_t SRUP_UPDATE_FAIL_HTTP_ERROR = 0xFC;
     }
 
     namespace ACTIVATE
@@ -28,23 +28,13 @@ namespace SRUP
     namespace ACTION
     {
         static const uint8_t SRUP_ACTION_SUCCESS = 0x20;
-        static const uint8_t SRUP_ACTION_UKNOWN = 0x2E;
+        static const uint8_t SRUP_ACTION_UNKNOWN = 0x2E;
         static const uint8_t SRUP_ACTION_FAIL = 0x2F;
     }
 
     namespace DATA
     {
-        static const uint8_t SRUP_DATA_TYPE_UKNOWN = 0x3F;
-    }
-
-    namespace GROUP
-    {
-        static const uint8_t SRUP_GROUP_ADD_SUCCESS = 0x40;
-        static const uint8_t SRUP_GROUP_DEL_SUCCESS = 0x41;
-        static const uint8_t SRUP_GROUP_DEL_INVALID = 0x4C;
-        static const uint8_t SRUP_GROUP_DEL_FAIL = 0x4D;
-        static const uint8_t SRUP_GROUP_ADD_FAIL_LIMIT = 0x4E;
-        static const uint8_t SRUP_GROUP_ADD_FAIL = 0x4F;
+        static const uint8_t SRUP_DATA_TYPE_UNKNOWN = 0x3F;
     }
 
     namespace JOIN

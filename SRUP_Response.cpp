@@ -7,7 +7,6 @@
 SRUP_MSG_RESPONSE::SRUP_MSG_RESPONSE()
 {
     m_msgtype[0] = SRUP::SRUP_MESSAGE_TYPE_RESPONSE;
-
     m_status = nullptr;
 }
 
@@ -46,11 +45,19 @@ bool SRUP_MSG_RESPONSE::Serialize(bool preSign)
 
     // Now check that we have a sequence ID...
     if (m_sequence_ID == nullptr)
+    {
+        delete[] msb;
+        delete[] lsb;
         return false;
+    }
 
     // ...and a sender ID
     if (m_sender_ID == nullptr)
+    {
+        delete[] msb;
+        delete[] lsb;
         return false;
+    }
 
     // If we're calling this as a prelude to signing / verifying then we need to exclude the signature data from the
     // serial data we generate...

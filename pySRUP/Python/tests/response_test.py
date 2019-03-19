@@ -117,7 +117,7 @@ def test_response_signing():
     x.sender_id = 0x5F5F5F5F5F5F5F5F
     assert x.sign(keyfile) is False
 
-    x.status = x.srup_response_status_group_delete_success()
+    x.status = x.srup_response_status_resign_success()
     assert x.sign(blank) is False
     assert x.sign(keyfile) is True
 
@@ -164,6 +164,29 @@ def test_initiate_deserializer():
     assert y.sender_id == send_id
     assert y.sequence_id == seq_id
     assert y.status == status
+
+
+def test_initiate_generic_deserializer():
+    token = "TOKEN12345"
+    action_id = 7
+    seq_id = 0x1234567890ABCDEF
+    send_id = 0x5F5F5F5F5F5F5F5F
+    status = pySRUPLib.SRUP_Response().srup_response_status_update_fail_file()
+
+    x = pySRUPLib.SRUP_Response()
+    i = pySRUPLib.SRUP_Generic()
+
+    x.action_id = action_id
+    x.token = token
+    x.sequence_id = seq_id
+    x.sender_id = send_id
+    x.status = status
+
+    assert x.sign(keyfile) is True
+    z = x.serialize()
+
+    assert i.deserialize(z) is True
+    assert i.msg_type == pySRUPLib.__response_message_type()
 
 
 def test_empty_object():
@@ -213,24 +236,6 @@ def test_response_status_values():
 
     t = x.srup_response_status_data_type_unknown()
     assert t == 0x3F
-
-    t = x.srup_response_status_group_add_success()
-    assert t == 0x40
-
-    t = x.srup_response_status_group_delete_success()
-    assert t == 0x41
-
-    t = x.srup_response_status_group_delete_invalid()
-    assert t == 0x4C
-
-    t = x.srup_response_status_group_delete_fail()
-    assert t == 0x4D
-
-    t = x.srup_response_status_group_add_fail_limit()
-    assert t == 0x4E
-
-    t = x.srup_response_status_group_add_fail()
-    assert t == 0x4F
 
     t = x.srup_response_status_join_success()
     assert t == 0x50

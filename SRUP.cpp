@@ -43,7 +43,7 @@ SRUP_MSG::~SRUP_MSG()
         delete(m_token);
 
     if (m_serialized != nullptr)
-        delete (m_serialized);
+        delete[] m_serialized;
 
     if (m_sequence_ID != nullptr)
         delete (m_sequence_ID);
@@ -84,7 +84,7 @@ const uint8_t* SRUP_MSG::signature()
     return m_signature;
 }
 
-bool SRUP_MSG::token(const uint8_t* t, u_int16_t len)
+bool SRUP_MSG::token(const uint8_t* t, uint16_t len)
 {
     try
     {
@@ -114,7 +114,7 @@ const uint8_t* SRUP_MSG::token()
     return m_token;
 }
 
-bool SRUP_MSG::Sign(char *keyfile)
+bool SRUP_MSG::SignF(char *keyfile)
 {
     if (!DataCheck())
         return false;
@@ -131,7 +131,7 @@ bool SRUP_MSG::Sign(char *keyfile)
 
     // Running Serialize with preSign = true - will set m_serialized to the byte stream to be signed...
     Serialize(true);
-    if (Crypto.Sign(m_unsigned_message, m_unsigned_length, keyfile) == nullptr)
+    if (Crypto.SignF(m_unsigned_message, m_unsigned_length, keyfile) == nullptr)
         return false;
 
     p_signature = Crypto.signature();
@@ -146,15 +146,60 @@ bool SRUP_MSG::Sign(char *keyfile)
     return true;
 }
 
-bool SRUP_MSG::Verify(char *keyfile)
+bool SRUP_MSG::VerifyF(char *keyfile)
 {
     if (!DataCheck())
         return false;
 
     SRUP_Crypto Crypto;
-    Crypto.setSignature(m_signature, m_sig_len);
+    Crypto.signature(m_signature, m_sig_len);
     Serialize(true);
-    return Crypto.Verify(m_unsigned_message, m_unsigned_length, keyfile);
+    return Crypto.VerifyF(m_unsigned_message, m_unsigned_length, keyfile);
+}
+
+bool SRUP_MSG::Sign(char *key)
+{
+    if (!DataCheck())
+        return false;
+
+    // Check to see if the key is not null before we try to do anything with it...
+    if (key == nullptr)
+        return false;
+
+    m_is_serialized = false;
+
+    SRUP_Crypto Crypto;
+    unsigned char* p_signature;
+
+    // Running Serialize with preSign = true - will set m_serialized to the byte stream to be signed...
+    Serialize(true);
+    if (Crypto.Sign(m_unsigned_message, m_unsigned_length, key) == nullptr)
+        return false;
+
+    p_signature = Crypto.signature();
+    m_sig_len = (uint16_t) Crypto.sigLen();
+
+    if (m_signature != nullptr)
+        delete(m_signature);
+    m_signature = new uint8_t[m_sig_len];
+
+    memcpy(m_signature, p_signature, m_sig_len);
+
+    return true;
+}
+
+bool SRUP_MSG::Verify(char *key)
+{
+    if (!DataCheck())
+        return false;
+
+    if (key == nullptr)
+        return false;
+
+    SRUP_Crypto Crypto;
+    Crypto.signature(m_signature, m_sig_len);
+    Serialize(true);
+    return Crypto.Verify(m_unsigned_message, m_unsigned_length, key);
 }
 
 const uint64_t *SRUP_MSG::sequenceID()
@@ -204,7 +249,7 @@ bool SRUP_MSG::senderID(const uint64_t *sender)
             delete(m_sender_ID);
 
         m_sender_ID = new uint64_t;
-        std::memcpy(m_sender_ID, sender, sizeof(uint64_t));
+        std::memcpy(m_sender_ID, sender, sizeof(*sender));
     }
     catch (...)
     {

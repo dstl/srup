@@ -28,8 +28,9 @@ bool SRUP_MSG_DATA::data_ID(const uint8_t *data_ID, const uint16_t len)
     if (m_data_ID != nullptr)
         delete(m_data_ID);
 
-    m_data_ID = new uint8_t[len];
+    m_data_ID = new uint8_t[len+1];
     std::memcpy(m_data_ID, data_ID, len);
+    std::memset(m_data_ID+len, 0, 1);
     m_data_ID_len = len;
     return true;
 }
@@ -178,12 +179,19 @@ bool SRUP_MSG_DATA::Serialize(bool preSign)
 
     // Now check that we have a sequence ID...
     if (m_sequence_ID == nullptr)
+    {
+        delete[] msb;
+        delete[] lsb;
         return false;
+    }
 
     // ...and check that we have a sender ID
     if (m_sender_ID == nullptr)
+    {
+        delete[] msb;
+        delete[] lsb;
         return false;
-
+    }
 
     // If we're calling this as a prelude to signing / verifying then we need to exclude the signature data from the
     // serial data we generate...
@@ -246,16 +254,16 @@ bool SRUP_MSG_DATA::Serialize(bool preSign)
     {
         if (m_signature == nullptr)
         {
-            delete (msb);
-            delete (lsb);
+            delete[] msb;
+            delete[] lsb;
             return false;
         }
         else
         {
             if (m_sig_len == 0)
             {
-                delete (msb);
-                delete (lsb);
+                delete[] msb;
+                delete[] lsb;
                 return false;
             }
             else
@@ -287,8 +295,8 @@ bool SRUP_MSG_DATA::Serialize(bool preSign)
     std::memcpy(m_serialized + p, m_data, m_data_len);
     p+=m_data_len;
 
-    delete(msb);
-    delete(lsb);
+    delete[] msb;
+    delete[] lsb;
 
     // If we're in preSign we don't have a real value for m_serialized - so copy the data to m_unsigned_message
     // and discard (and reset) m_serialized & m_serial_length...
@@ -368,7 +376,7 @@ bool SRUP_MSG_DATA::data(const uint16_t data)
     if (m_data != nullptr)
         delete(m_data);
 
-    m_data = new uint8_t;
+    m_data = new uint8_t[len];
     std::memcpy(m_data, &data, len);
     m_data_len = len;
     return true;
@@ -382,7 +390,7 @@ bool SRUP_MSG_DATA::data(const int16_t data)
     if (m_data != nullptr)
         delete(m_data);
 
-    m_data = new uint8_t;
+    m_data = new uint8_t[len];
     std::memcpy(m_data, &data, len);
     m_data_len = len;
     return true;
@@ -396,7 +404,7 @@ bool SRUP_MSG_DATA::data(const uint32_t data)
     if (m_data != nullptr)
         delete(m_data);
 
-    m_data = new uint8_t;
+    m_data = new uint8_t[len];
     std::memcpy(m_data, &data, len);
     m_data_len = len;
     return true;
@@ -410,7 +418,7 @@ bool SRUP_MSG_DATA::data(const int32_t data)
     if (m_data != nullptr)
         delete(m_data);
 
-    m_data = new uint8_t;
+    m_data = new uint8_t[len];
     std::memcpy(m_data, &data, len);
     m_data_len = len;
     return true;
@@ -423,7 +431,7 @@ bool SRUP_MSG_DATA::data(const uint64_t data)
     if (m_data != nullptr)
         delete(m_data);
 
-    m_data = new uint8_t;
+    m_data = new uint8_t[len];
     std::memcpy(m_data, &data, len);
     m_data_len = len;
     return true;
@@ -437,7 +445,7 @@ bool SRUP_MSG_DATA::data(const int64_t data)
     if (m_data != nullptr)
         delete(m_data);
 
-    m_data = new uint8_t;
+    m_data = new uint8_t[len];
     std::memcpy(m_data, &data, len);
     m_data_len = len;
     return true;
@@ -451,7 +459,7 @@ bool SRUP_MSG_DATA::data(const float data)
     if (m_data != nullptr)
         delete(m_data);
 
-    m_data = new uint8_t;
+    m_data = new uint8_t[len];
     std::memcpy(m_data, &data, len);
     m_data_len = len;
     return true;
@@ -465,7 +473,7 @@ bool SRUP_MSG_DATA::data(const double data)
     if (m_data != nullptr)
         delete(m_data);
 
-    m_data = new uint8_t;
+    m_data = new uint8_t[len];
     std::memcpy(m_data, &data, len);
     m_data_len = len;
     return true;
@@ -478,7 +486,7 @@ const uint8_t *SRUP_MSG_DATA::data()
 
 uint8_t* SRUP_MSG_DATA::data_uint8()
 {
-    return (uint8_t*) m_data;
+    return m_data;
 }
 
 int8_t* SRUP_MSG_DATA::data_int8()

@@ -9,11 +9,10 @@ pubkeyfile = "public_key.pem"
 
 # The main test script for pySRUPLib's SRUP_Initiate() class...
 
+
 def test_activate_type():
     x = pySRUPLib.SRUP_Activate()
     assert x.msg_type == pySRUPLib.__activate_message_type()
-
-
 
 
 def test_activate_seqid():
@@ -123,6 +122,25 @@ def test_activate_deserializer():
     assert y.token == token
     assert y.sender_id == send_id
     assert y.sequence_id == seq_id
+
+
+def test_activate_generic_deserializer():
+    token = "TOKEN12345"
+    seq_id = 0x1234567890ABCDEF
+    send_id = 0x5F5F5F5F5F5F5F5F
+
+    x = pySRUPLib.SRUP_Activate()
+    i = pySRUPLib.SRUP_Generic()
+
+    x.token = token
+    x.sequence_id = seq_id
+    x.sender_id = send_id
+
+    assert x.sign(keyfile) is True
+    z = x.serialize()
+
+    assert i.deserialize(z) is True
+    assert i.msg_type == pySRUPLib.__activate_message_type()
 
 
 def test_empty_object():

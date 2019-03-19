@@ -12,6 +12,20 @@
 #include "SRUP_Activate.h"
 #include "SRUP_Response.h"
 #include "SRUP_Action.h"
+#include "SRUP_ID_REQ.h"
+#include "SRUP_Observation_Req.h"
+#include "SRUP_Deregister.h"
+#include "SRUP_Observed_Join_Resp.h"
+#include "SRUP_Human_Join_Resp.h"
+#include "SRUP_Group_Delete.h"
+#include "SRUP_Observed_Join.h"
+#include "SRUP_Join.h"
+#include "SRUP_Terminate.h"
+#include "SRUP_Group_Add.h"
+#include "SRUP_Human_Join.h"
+#include "SRUP_Join_Cmd.h"
+#include "SRUP_Resign.h"
+#include "SRUP_Group_Destroy.h"
 
 namespace SRUP
 {
@@ -37,6 +51,7 @@ public:
 protected:
     bool Serialize(bool optional = false);
     bool DataCheck();
+    bool ValidMessageType(uint8_t*);
 
 };
 

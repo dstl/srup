@@ -10,4 +10,4 @@ Further details of the protocol may be found in the papers:
 
 * Extensions and Enhancements to "the Secure Remote Update Protocol" (published in Volume 9, issue 4 of the Journal 'Future Internet') - http://www.mdpi.com/1999-5903/9/4/59
 
-[![DOI](https://zenodo.org/badge/154818146.svg)](https://zenodo.org/badge/latestdoi/154818146)
+The latest release of the source code can be accessed via [![DOI](https://zenodo.org/badge/62746329.svg)](https://zenodo.org/badge/latestdoi/62746329) 

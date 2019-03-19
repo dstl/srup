@@ -14,13 +14,6 @@ def test_initiate_type():
     assert x.msg_type == pySRUPLib.__initiate_message_type()
 
 
-def test_initiate_target():
-    x = pySRUPLib.SRUP_Initiate()
-    assert x.target is None
-    x.target = 0x7C7C7C7C7C7C7C7C
-    assert x.target == 0x7C7C7C7C7C7C7C7C
-
-
 def test_initiate_url():
     x = pySRUPLib.SRUP_Initiate()
     assert x.url is None
@@ -165,9 +158,33 @@ def test_initiate_deserializer():
     assert y.token == token
     assert y.sender_id == send_id
     assert y.sequence_id == seq_id
-    assert y.target == target
     assert y.url == url
     assert y.digest == digest
+
+
+def test_initiate_generic_deserializer():
+    token = "TOKEN12345"
+    action_id = 7
+    seq_id = 0x1234567890ABCDEF
+    send_id = 0x5F5F5F5F5F5F5F5F
+    digest = "8317c2d45ef7d42d7abe4f2eb5f53787e158b78680d67e99615b8799ef9936eb"
+    url = "http://www.really-long-url.example.com/longpath/to/the/files/we_might/need.py"
+
+    x = pySRUPLib.SRUP_Initiate()
+    i = pySRUPLib.SRUP_Generic()
+
+    x.action_id = action_id
+    x.token = token
+    x.sequence_id = seq_id
+    x.sender_id = send_id
+    x.digest = digest
+    x.url = url
+
+    assert x.sign(keyfile) is True
+    z = x.serialize()
+
+    assert i.deserialize(z) is True
+    assert i.msg_type == pySRUPLib.__initiate_message_type()
 
 
 def test_empty_object():
@@ -177,5 +194,4 @@ def test_empty_object():
     assert x.sender_id is None
     assert x.url is None
     assert x.digest is None
-    assert x.target is None
     assert x.sign("") is False
