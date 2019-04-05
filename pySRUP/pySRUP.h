@@ -14,6 +14,22 @@
 #include "SRUP_Action.h"
 #include "SRUP_Init.h"
 #include "SRUP_Activate.h"
+#include "SRUP_Join.h"
+#include "SRUP_Join_Cmd.h"
+#include "SRUP_ID_REQ.h"
+#include "SRUP_Resign.h"
+#include "SRUP_Terminate.h"
+#include "SRUP_Deregister.h"
+#include "SRUP_Deregister_Cmd.h"
+#include "SRUP_Group_Add.h"
+#include "SRUP_Group_Delete.h"
+#include "SRUP_Group_Destroy.h"
+#include "SRUP_Human_Join_Resp.h"
+#include "SRUP_Human_Join.h"
+#include "SRUP_Observation_Req.h"
+#include "SRUP_Observed_Join_Resp.h"
+#include "SRUP_Observed_Join.h"
+
 
 uint8_t get_srup_library_version();
 
@@ -22,6 +38,18 @@ uint8_t get_srup_library_initiate_message_type();
 uint8_t get_srup_library_response_message_type();
 uint8_t get_srup_library_activate_message_type();
 uint8_t get_srup_library_action_message_type();
+uint8_t get_srup_library_join_request_message_type();
+uint8_t get_srup_library_join_command_message_type();
+uint8_t get_srup_library_id_request_message_type();
+uint8_t get_srup_library_resign_request_message_type();
+uint8_t get_srup_library_terminate_command_message_type();
+uint8_t get_srup_library_deregister_request_message_type();
+uint8_t get_srup_library_deregister_command_message_type();
+uint8_t get_srup_library_human_join_reqeust_message_type();
+uint8_t get_srup_library_human_join_response_message_type();
+uint8_t get_srup_library_observed_join_response_message_type();
+uint8_t get_srup_library_observed_join_request_message_type();
+uint8_t get_srup_library_observation_request_message_type();
 
 uint8_t get_version(SRUP_MSG&);
 uint8_t get_msgtype(SRUP_MSG&);

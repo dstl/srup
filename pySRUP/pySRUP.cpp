@@ -30,7 +30,70 @@ uint8_t get_srup_library_action_message_type()
     return SRUP::SRUP_MESSAGE_TYPE_ACTION;
 }
 
-// Note that since .token() can return a nullptr for an uninitialized object - we need a more complex getter function for the Python 
+uint8_t get_srup_library_join_request_message_type()
+{
+    return SRUP::SRUP_MESSAGE_TYPE_JOIN_REQ;
+}
+
+uint8_t get_srup_library_join_command_message_type()
+{
+    return SRUP::SRUP_MESSAGE_TYPE_JOIN_CMD;
+}
+
+uint8_t get_srup_library_id_request_message_type()
+{
+    return SRUP::SRUP_MESSAGE_TYPE_ID_REQUEST;
+}
+
+uint8_t get_srup_library_resign_request_message_type()
+{
+    return SRUP::SRUP_MESSAGE_TYPE_RESIGN_REQUEST;
+}
+
+uint8_t get_srup_library_terminate_command_message_type()
+{
+    return SRUP::SRUP_MESSAGE_TYPE_TERMINATE_CMD;
+}
+
+uint8_t get_srup_library_deregister_request_message_type()
+{
+    return SRUP::SRUP_MESSAGE_TYPE_DEREGISTER_REQ;
+}
+
+uint8_t get_srup_library_deregister_command_message_type()
+{
+    return SRUP::SRUP_MESSAGE_TYPE_DEREGISTER_CMD;
+}
+
+uint8_t get_srup_library_human_join_reqeust_message_type()
+{
+
+    return SRUP::SRUP_MESSAGE_TYPE_HM_JOIN_REQ;
+}
+
+uint8_t get_srup_library_human_join_response_message_type()
+{
+
+    return SRUP::SRUP_MESSAGE_TYPE_HM_JOIN_RESP;
+}
+
+uint8_t get_srup_library_observed_join_request_message_type()
+{
+    return SRUP::SRUP_MESSAGE_TYPE_OBS_JOIN_REQ;
+}
+
+uint8_t get_srup_library_observed_join_response_message_type()
+{
+    return SRUP::SRUP_MESSAGE_TYPE_OBS_JOIN_RESP;
+}
+
+
+uint8_t get_srup_library_observation_request_message_type()
+{
+    return SRUP::SRUP_MESSAGE_TYPE_OBSERVE_REQ;
+}
+
+
 // property to ensure that we return a None in those cases. We could return "" : but None is more correct...
 boost::python::object get_token(SRUP_MSG& self)
 {
@@ -94,19 +157,6 @@ void set_senderID(SRUP_MSG& self, uint64_t sender)
 {
     self.senderID(&sender);
 }
-
-// We shouldn't need to return the signature directly to Python...
-/*
-boost::python::object get_signature(SRUP_MSG& self)
-{
-    const uint8_t* rv;
-    rv = self.signature();
-    if (rv!=nullptr)
-        return boost::python::object(std::string((char*)rv));
-    else
-        return boost::python::object();
-}
-*/
 
 PyObject* serializer(SRUP_MSG& self)
 {

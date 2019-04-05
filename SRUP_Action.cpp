@@ -45,12 +45,19 @@ bool SRUP_MSG_ACTION::Serialize(bool preSign)
 
     // Now check that we have a sequence ID...
     if (m_sequence_ID == nullptr)
+    {
+        delete[] msb;
+        delete[] lsb;
         return false;
+    }
 
     // ...and check that we have a sender ID
     if (m_sender_ID == nullptr)
+    {
+        delete[] msb;
+        delete[] lsb;
         return false;
-
+    }
 
     // If we're calling this as a prelude to signing / verifying then we need to exclude the signature data from the
     // serial data we generate...

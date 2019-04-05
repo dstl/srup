@@ -357,7 +357,6 @@ def test_data_signing():
     assert x.sign(blank) is False
     assert x.sign(keyfile) is False
 
-    x.action_id = 7
     assert x.sign(keyfile) is False
 
     x.token = "TOKEN12345"
@@ -383,7 +382,6 @@ def test_data_signing():
 
 def test_data_serializer_int():
     x = pySRUPLib.SRUP_Data()
-    x.action_id = 7
     x.token = "TOKEN12345"
     x.sequence_id = 0x1234567890ABCDEF
     x.sender_id = 0x5F5F5F5F5F5F5F5F
@@ -391,11 +389,11 @@ def test_data_serializer_int():
     x.uint8_data = 20
     assert x.sign(keyfile) is True
     z = x.serialize()
+    assert z is not None
 
 
 def test_data_serializer_long_long_int():
     x = pySRUPLib.SRUP_Data()
-    x.action_id = 7
     x.token = "TOKEN12345"
     x.sequence_id = 0x1234567890ABCDEF
     x.sender_id = 0x5F5F5F5F5F5F5F5F
@@ -403,11 +401,11 @@ def test_data_serializer_long_long_int():
     x.uint64_data = 0x1234567890ABCDEF
     assert x.sign(keyfile) is True
     z = x.serialize()
+    assert z is not None
 
 
 def test_data_serializer_double():
     x = pySRUPLib.SRUP_Data()
-    x.action_id = 7
     x.token = "TOKEN12345"
     x.sequence_id = 0x1234567890ABCDEF
     x.sender_id = 0x5F5F5F5F5F5F5F5F
@@ -415,11 +413,11 @@ def test_data_serializer_double():
     x.double_data = 1234567.89012345
     assert x.sign(keyfile) is True
     z = x.serialize()
+    assert z is not None
 
 
 def test_data_serializer_string():
     x = pySRUPLib.SRUP_Data()
-    x.action_id = 7
     x.token = "TOKEN12345"
     x.sequence_id = 0x1234567890ABCDEF
     x.sender_id = 0x5F5F5F5F5F5F5F5F
@@ -427,21 +425,57 @@ def test_data_serializer_string():
     x.bytes_data = "This is a test message that someone might want to send"
     assert x.sign(keyfile) is True
     z = x.serialize()
+    assert z is not None
+
+
+def test_data_serializer_specific():
+    x = pySRUPLib.SRUP_Data()
+    x.token = 'b42c27f3-48bd-4ee6-bd86-09bae2e3a546'
+    x.sequence_id = 17
+    x.sender_id = 13389333505314606326
+    x.data_id = 'IDENTIFICATION_RESPONSE'
+    x.bytes_data = 'pySRUP version 1.0'
+    assert x.sign(keyfile) is True
+    z = x.serialize()
+    assert z is not None
 
 
 def test_data_serialize_blank_token():
     x = pySRUPLib.SRUP_Data()
-    x.action_id = 0
     x.token = ""
     x.sequence_id = 0x1234567890ABCDEF
     x.sender_id = 0x5F5F5F5F5F5F5F5F
     assert x.sign(keyfile) is False
     z = x.serialize()
+    assert z is None
+
+
+def test_data_generic_deserializer():
+    token = "TOKEN12345"
+    seq_id = 0x1234567890ABCDEF
+    send_id = 0x5F5F5F5F5F5F5F5F
+    data_id = "Text"
+    data = "This is some text ..."
+
+    x = pySRUPLib.SRUP_Data()
+    i = pySRUPLib.SRUP_Generic()
+
+    x.token = token
+    x.sequence_id = seq_id
+    x.sender_id = send_id
+    x.data_id = data_id
+    x.bytes_data = data
+
+    assert x.sign(keyfile) is True
+    z = x.serialize()
+    assert z is not None
+
+    assert i.deserialize(z) is True
+    assert i.msg_type == pySRUPLib.__data_message_type()
 
 
 def test_data_deserializer_int16():
     token = "TOKEN12345"
-    action_id = 7
     seq_id = 0x1234567890ABCDEF
     send_id = 0x5F5F5F5F5F5F5F5F
     data_id = "COUNT"
@@ -450,7 +484,6 @@ def test_data_deserializer_int16():
     x = pySRUPLib.SRUP_Data()
     y = pySRUPLib.SRUP_Data()
 
-    x.action_id = action_id
     x.token = token
     x.sequence_id = seq_id
     x.sender_id = send_id
@@ -472,7 +505,6 @@ def test_data_deserializer_int16():
 
 def test_data_deserializer_string():
     token = "TOKEN12345"
-    action_id = 7
     seq_id = 0x1234567890ABCDEF
     send_id = 0x5F5F5F5F5F5F5F5F
     data_id = "Text"
@@ -481,7 +513,6 @@ def test_data_deserializer_string():
     x = pySRUPLib.SRUP_Data()
     y = pySRUPLib.SRUP_Data()
 
-    x.action_id = action_id
     x.token = token
     x.sequence_id = seq_id
     x.sender_id = send_id
@@ -503,7 +534,6 @@ def test_data_deserializer_string():
 
 def test_data_deserializer_double():
     token = "TOKEN12345"
-    action_id = 7
     seq_id = 0x1234567890ABCDEF
     send_id = 0x5F5F5F5F5F5F5F5F
     data_id = "Temperature"
@@ -512,7 +542,6 @@ def test_data_deserializer_double():
     x = pySRUPLib.SRUP_Data()
     y = pySRUPLib.SRUP_Data()
 
-    x.action_id = action_id
     x.token = token
     x.sequence_id = seq_id
     x.sender_id = send_id

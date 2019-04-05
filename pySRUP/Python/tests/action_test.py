@@ -7,8 +7,14 @@ import pySRUPLib
 keyfile = "private_key.pem"
 pubkeyfile = "public_key.pem"
 
-# The main test script for pySRUPLib's SRUP_Action() class...
+with open(keyfile, 'r') as f:
+    private_key_string = f.read()
 
+with open(pubkeyfile, 'r') as f:
+    public_key_string = f.read()
+
+
+# The main test script for pySRUPLib's SRUP_Action() class...
 
 def test_action_type():
     x = pySRUPLib.SRUP_Action()
@@ -123,6 +129,36 @@ def test_action_signing():
     assert x.verify(pubkeyfile) is False
 
 
+def test_action_signing_keystring():
+    blank = ""
+
+    x = pySRUPLib.SRUP_Action()
+    assert x.sign_keystring(blank) is False
+    assert x.sign_keystring(private_key_string) is False
+
+    x.action_id = 7
+    assert x.sign_keystring(private_key_string) is False
+
+    x.token = "TOKEN12345"
+    assert x.sign_keystring(private_key_string) is False
+
+    x.sequence_id = 0x1234567890ABCDEF
+    assert x.sign_keystring(private_key_string) is False
+
+    x.sender_id = 0x5F5F5F5F5F5F5F5F
+    assert x.sign_keystring(blank) is False
+    assert x.sign_keystring(private_key_string) is True
+    assert x.verify_keystring(public_key_string) is True
+
+    assert x.verify(pubkeyfile) is True
+
+    assert x.sign(keyfile) is True
+    assert x.verify_keystring(public_key_string) is True
+
+    x.action_id = 6
+    assert x.verify_keystring(public_key_string) is False
+
+
 def test_serializer():
     x = pySRUPLib.SRUP_Action()
     x.action_id = 7
@@ -166,6 +202,27 @@ def test_deserializer():
     assert y.sender_id == send_id
     assert y.sequence_id == seq_id
     assert y.verify(pubkeyfile) is True
+
+
+def action_test_generic_deserializer():
+    token = "TOKEN12345"
+    action_id = 7
+    seq_id = 0x1234567890ABCDEF
+    send_id = 0x5F5F5F5F5F5F5F5F
+
+    x = pySRUPLib.SRUP_Action()
+    i = pySRUPLib.SRUP_Generic()
+
+    x.action_id = action_id
+    x.token = token
+    x.sequence_id = seq_id
+    x.sender_id = send_id
+
+    assert x.sign(keyfile) is True
+    z = x.serialize()
+
+    assert i.deserialize(z) is True
+    assert i.msg_type == pySRUPLib.__action_message_type()
 
 
 def test_empty_object():

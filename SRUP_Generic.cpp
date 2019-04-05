@@ -17,14 +17,14 @@ SRUP_MSG_GENERIC::~SRUP_MSG_GENERIC()
 
 bool SRUP_MSG_GENERIC::Serialize(bool preSign)
 {
-    uint8_t * msb;
-    uint8_t * lsb;
+    uint8_t *msb;
+    uint8_t *lsb;
 
-    msb=new uint8_t[1];
-    lsb=new uint8_t[1];
+    msb = new uint8_t[1];
+    lsb = new uint8_t[1];
 
     const unsigned short header_size = 18; // 2 + 8 + 8 - to include session ID & sender ID...
-    unsigned short p=0;
+    unsigned short p = 0;
 
     // Serial length is the header + two-byte token length, plus the length of the token in bytes.
     m_serial_length = header_size + 2 + m_token_len;
@@ -36,15 +36,27 @@ bool SRUP_MSG_GENERIC::Serialize(bool preSign)
     // Technically we don't need one - but we might want use this to check a generic message for a valid sequence ID
     // before we map it onto the correct message type - so we'll include it here.
     if (m_sequence_ID == nullptr)
+    {
+        delete[] msb;
+        delete[] lsb;
         return false;
+    }
 
     // ...by the same logic - we'll also check for the sender ID - as it too, is a part of the "base" message...
     if (m_sender_ID == nullptr)
+    {
+        delete[] msb;
+        delete[] lsb;
         return false;
+    }
 
     // ...and lastly for the token.
     if (m_token == nullptr)
+    {
+        delete[] msb;
+        delete[] lsb;
         return false;
+    }
 
     m_serialized = new unsigned char[m_serial_length];
     std::memset(m_serialized, 0, m_serial_length);
@@ -122,9 +134,7 @@ bool SRUP_MSG_GENERIC::DeSerialize(const unsigned char* serial_data)
     if (*m_version != SRUP::SRUP_VERSION)
         return false;
 
-    if ((*m_msgtype != SRUP::SRUP_MESSAGE_TYPE_INITIATE) and (*m_msgtype != SRUP::SRUP_MESSAGE_TYPE_GENERIC) and
-            (*m_msgtype != SRUP::SRUP_MESSAGE_TYPE_RESPONSE) and (*m_msgtype != SRUP::SRUP_MESSAGE_TYPE_ACTIVATE) and
-            (*m_msgtype != SRUP::SRUP_MESSAGE_TYPE_DATA) and (*m_msgtype != SRUP::SRUP_MESSAGE_TYPE_ACTION))
+    if (not (ValidMessageType (m_msgtype)))
         return false;
 
     // If we make it to here – there's a good chance the message is a valid one...
@@ -176,5 +186,29 @@ bool SRUP_MSG_GENERIC::DataCheck()
     return false;
 }
 
+bool SRUP_MSG_GENERIC::ValidMessageType (uint8_t *msgtype)
+{
+    return ((*msgtype == SRUP::SRUP_MESSAGE_TYPE_INITIATE) or
+        (*msgtype == SRUP::SRUP_MESSAGE_TYPE_GENERIC) or
+        (*msgtype != SRUP::SRUP_MESSAGE_TYPE_RESPONSE) or
+        (*msgtype != SRUP::SRUP_MESSAGE_TYPE_ACTIVATE) or
+        (*msgtype != SRUP::SRUP_MESSAGE_TYPE_DATA) or
+        (*msgtype != SRUP::SRUP_MESSAGE_TYPE_ACTION) or
+        (*msgtype != SRUP::SRUP_MESSAGE_TYPE_ID_REQUEST) or
+        (*msgtype != SRUP::SRUP_MESSAGE_TYPE_OBSERVE_REQ) or
+        (*msgtype != SRUP::SRUP_MESSAGE_TYPE_DEREGISTER_REQ) or
+        (*msgtype != SRUP::SRUP_MESSAGE_TYPE_OBS_JOIN_RESP) or
+        (*msgtype != SRUP::SRUP_MESSAGE_TYPE_HM_JOIN_RESP) or
+        (*msgtype != SRUP::SRUP_MESSAGE_TYPE_GROUP_DELETE) or
+        (*msgtype != SRUP::SRUP_MESSAGE_TYPE_OBS_JOIN_REQ) or
+        (*msgtype != SRUP::SRUP_MESSAGE_TYPE_JOIN_REQ) or
+        (*msgtype != SRUP::SRUP_MESSAGE_TYPE_TERMINATE_CMD) or
+        (*msgtype != SRUP::SRUP_MESSAGE_TYPE_GROUP_ADD) or
+        (*msgtype != SRUP::SRUP_MESSAGE_TYPE_HM_JOIN_REQ) or
+        (*msgtype != SRUP::SRUP_MESSAGE_TYPE_JOIN_CMD) or
+        (*msgtype != SRUP::SRUP_MESSAGE_TYPE_RESIGN_REQUEST) or
+        (*msgtype != SRUP::SRUP_MESSAGE_TYPE_GROUP_DESTROY)
+    );
+}
 
 

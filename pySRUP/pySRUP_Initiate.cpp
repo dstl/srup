@@ -7,22 +7,6 @@
 // Note that as elsewhere as the getters can return a nullptr
 // We need to use the more complex form of the getter to return a None in those cases.
 
-void set_target(SRUP_MSG_INIT& self, uint64_t target)
-{
-    self.target(&target);
-}
-
-boost::python::object get_target(SRUP_MSG_INIT& self)
-{
-    const uint64_t* rv;
-    rv = self.target();
-
-    if (rv != nullptr)
-        return boost::python::object(*rv);
-    else
-        return boost::python::object();
-}
-
 void set_url(SRUP_MSG_INIT& self, std::string url)
 {
     // Note that we need to add one to the C++ std::string length - to allow for the terminating \0 which c_str() adds...

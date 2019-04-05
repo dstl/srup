@@ -81,3 +81,10 @@ class CSRVerificationError(KeyExReturn):
         super().__init__()
         self._status_code = 400
         self._msg = "The CSR data did not verify"
+
+
+class IDNotFound(KeyExReturn):
+    def __init__(self):
+        super().__init__()
+        self._status_code = 404
+        self._msg = "The specified device identity was not found"

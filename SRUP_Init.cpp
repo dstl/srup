@@ -8,7 +8,6 @@ SRUP_MSG_INIT::SRUP_MSG_INIT()
 {
     m_msgtype[0] = SRUP::SRUP_MESSAGE_TYPE_INITIATE;
 
-    m_target = nullptr;
     m_url = nullptr;
     m_digest = nullptr;
 
@@ -18,8 +17,6 @@ SRUP_MSG_INIT::SRUP_MSG_INIT()
 
 SRUP_MSG_INIT::~SRUP_MSG_INIT()
 {
-    if (m_target != nullptr)
-        delete (m_target);
     if (m_url != nullptr)
         delete (m_url);
     if (m_digest != nullptr)
@@ -32,8 +29,7 @@ bool SRUP_MSG_INIT::Serialize(bool preSign)
     // we need to know how long all of the fields are so that we can unmarshall the data at
     // the other end...
 
-    const uint16_t fixed_size = 26; // Two-bytes for the main header - plus 8 for the sequence ID & 8 for sender_ID...
-                                     // plus 8 for the target
+    const uint16_t fixed_size = 18; // Two-bytes for the main header - plus 8 for the sequence ID & 8 for sender_ID...
     const uint16_t field_length_size = 2; // We use two-bytes each to store the length of the variable length fields
 
     // We need the number of variable length fields - including the m_sig_len...
@@ -52,16 +48,28 @@ bool SRUP_MSG_INIT::Serialize(bool preSign)
     lsb=new uint8_t[1];
 
     // Check to see if these strings are assigned before we try to call strlen on them...
-    if(m_target == nullptr || m_token == nullptr || m_url == nullptr || m_digest == nullptr)
+    if(m_token == nullptr || m_url == nullptr || m_digest == nullptr)
+    {
+        delete[] msb;
+        delete[] lsb;
         return false;
+    }
 
     // Now check that we have a sequence ID...
     if (m_sequence_ID == nullptr)
+    {
+        delete[] msb;
+        delete[] lsb;
         return false;
+    }
 
     // ...and check that we have a sender ID
     if (m_sender_ID == nullptr)
+    {
+        delete[] msb;
+        delete[] lsb;
         return false;
+    }
 
     // If we're calling this as a prelude to signing / verifying then we need to exclude the signature data from the
     // serial data we generate...
@@ -146,15 +154,6 @@ bool SRUP_MSG_INIT::Serialize(bool preSign)
                 p += m_sig_len;
             }
         }
-    }
-
-    // TARGET...a fixed size field... but see above for the description of why we can't just use a straight memcpy...
-    for (int x=0;x<8;x++)
-    {
-        uint8_t byte;
-        byte = getByteVal(*m_target, x);
-        std::memcpy(m_serialized + p, &byte, 1);
-        p+=1;
     }
 
     // URL...
@@ -287,21 +286,6 @@ bool SRUP_MSG_INIT::DeSerialize(const unsigned char* serial_data)
 
     p+=x;
 
-
-    // Next we do the target - which unlike the others around it - is a fixed size...
-    // Again we have to do the same trick to unmarshall it ... (see above).
-    uint8_t tgt_bytes[8];
-    for (int i=0;i<8;i++)
-    {
-        std::memcpy(&tgt_bytes[i], (uint8_t*) serial_data + p, 1);
-        ++p;
-    }
-
-    if (m_target != nullptr)
-        delete(m_target);
-    m_target = new uint64_t;
-    std::memcpy(m_target, tgt_bytes, 8);
-
     // Now finally on to the remaining (simple) fields...
     std::memcpy(bytes, serial_data + p, 2);
     x = decodeLength(bytes);
@@ -326,32 +310,6 @@ bool SRUP_MSG_INIT::DeSerialize(const unsigned char* serial_data)
     return true;
 }
 
-bool SRUP_MSG_INIT::target(const uint64_t* t)
-{
-    m_is_serialized = false;
-    try
-    {
-        if (m_target != nullptr)
-            delete (m_target);
-
-        m_target = new uint64_t;
-        std::memcpy(m_target, t, sizeof(uint64_t));
-    }
-
-    catch (...)
-    {
-        m_target = nullptr;
-        return false;
-    }
-
-    return true;
-}
-
-
-uint64_t* SRUP_MSG_INIT::target()
-{
-    return m_target;
-}
 
 bool SRUP_MSG_INIT::url(const char* u, uint16_t u_len)
 {
@@ -409,7 +367,7 @@ char* SRUP_MSG_INIT::digest()
 
 bool SRUP_MSG_INIT::DataCheck()
 {
-    if((m_digest != nullptr) && (m_target != nullptr) && (m_url != nullptr) && (m_token != nullptr) && (m_sender_ID !=
+    if((m_digest != nullptr) && (m_url != nullptr) && (m_token != nullptr) && (m_sender_ID !=
             nullptr) && (m_sequence_ID != nullptr))
         return true;
     else
