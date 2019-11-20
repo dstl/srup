@@ -15,7 +15,7 @@ If you want to run the C++ unit tests you'll need to install the google test sui
 
 ## Building on Raspberry Pi
 
-The `CMakeList.txt` file now contains the neccessary modifications to automatically configure the build process for different targets – including Raspberry Pi (providing that all of the dependencies are installed).
+The `CMakeList.txt` file now contains the necessary modifications to automatically configure the build process for different targets – including Raspberry Pi (providing that all of the dependencies are installed).
 
 ## Installing dependencies
 
