@@ -30,12 +30,12 @@ This will build the files.
 
 ## pySRUP
 
-In order to use pySRUP - you will also need to have the `paho.mqtt`, and `pycryptdomex` Python libraries installed...
+In order to use pySRUP - you will also need to have the `paho.mqtt`, and `cryptography` Python libraries installed...
 
 Use:
 
 * `pip3 install --user paho.mqtt` 
-* `pip3 install --user pycryptodomex`
+* `pip3 install --user cryptography`
 
 If you want to use the Python unit tests – you'll also need `pytest` installed
 
@@ -48,7 +48,7 @@ To pass all of the unit tests – you'll also need to create an RSA key pair in
 
 ## Notes
 
-pySRUP has been built & tested on Linux (Fedora 26), MacOS (10.13), and Raspberry Pi (Rasbian Stretch Lite).
+pySRUP has been built & tested on Linux (Ubuntu & Fedora), MacOS (10.13 - 10.15), and Raspberry Pi (Rasbian Stretch Lite).
 
 **Please note that neither SRUP_Lib or pySRUP have been tested on Windows. It should work; but I don't develop on Windows, so you're on your own…**
 
