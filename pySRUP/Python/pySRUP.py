@@ -27,8 +27,10 @@ SRUP_RESPONSE_MESSAGE_TYPE = pySRUPLib.__response_message_type()
 SRUP_ACTIVATE_MESSAGE_TYPE = pySRUPLib.__activate_message_type()
 SRUP_ID_REQUEST_MESSAGE_TYPE = pySRUPLib.__id_request_message_type()
 SRUP_JOIN_REQUEST_MESSAGE_TYPE = pySRUPLib.__join_request_message_type()
+SRUP_HUMAN_JOIN_REQUEST_MESSAGE_TYPE = pySRUPLib.__human_join_request_message_type()
 SRUP_TERMINATE_COMMAND_MESSAGE_TYPE = pySRUPLib.__terminate_command_message_type()
 SRUP_JOIN_COMMAND_MESSAGE_TYPE = pySRUPLib.__join_command_message_type()
+SRUP_HUMAN_JOIN_RESPONSE_MESSAGE_TYPE = pySRUPLib.__human_join_response_message_type()
 SRUP_RESIGN_REQUEST_MESSAGE_TYPE = pySRUPLib.__resign_request_message_type()
 SRUP_DEREGISTER_REQUEST_MESSAGE_TYPE = pySRUPLib.__deregister_request_message_type()
 SRUP_DERESISTER_COMMNAND_MESSAGE_TYPE = pySRUPLib.__deregister_command_message_type()
@@ -45,9 +47,10 @@ SRUP_DERESISTER_COMMNAND_MESSAGE_TYPE = pySRUPLib.__deregister_command_message_t
 class SRUP:
 
     __keyExRoute = '/KeyEx/register/get_key/'
+    __deviceTypeRoute = '/KeyEx/register/get_type/'
 
-    def __init__(self, broker, device_id, local_private_key, local_public_key, remote_public_keys, start_seq_id,
-                 registration_url, server_id, ca_cert, cert, key, config_filename, server=False):
+    def __init__(self, broker, device_id, local_private_key, local_public_key, remote_public_keys, remote_device_types,
+                 start_seq_id, registration_url, server_id, ca_cert, cert, key, config_filename, server=False):
         self.__isServer = server
         self.__seq_id = start_seq_id
         self.__device_id = device_id
@@ -65,6 +68,15 @@ class SRUP:
         else:
             self.__keystore = remote_public_keys
 
+        self.__pending_joins = {}
+
+        # We use a similar data structure for the device type...
+        # TODO: Consider merging these two into a more complex data dictionary or database?
+        if remote_device_types is None:
+            self.__deviceTypes = {}
+        else:
+            self.__deviceTypes = remote_device_types
+
         self.__ca_cert = ca_cert
         self.__mqtt_cert = cert
         self.__mqtt_key = key
@@ -81,15 +93,23 @@ class SRUP:
         self.__on_id_request = None
         self.__on_terminate = None
         self.__on_join_command = None
+        self.__on_join_request = None
+        self.__on_join_refused = None
+        self.__on_join_failed = None
+        self.__on_join_succeed = None
         self.__on_resign_request = None
         self.__on_deregister_request = None
         self.__on_degregister_command = None
+        self.__on_human_join_request = None
+        self.__on_human_join_response = None
         self.__config_filename = config_filename
         self.__mqtt_client = mqtt.Client(client_id="SRUP Client: {}".format(device_id))
         self.__mqtt_client.on_connect = self.__on_connect
         self.__mqtt_client.on_message = self.__on_mqtt_message
         self.__mqtt_client.tls_set(ca_certs=self.__ca_cert, certfile=self.__mqtt_cert, keyfile=self.__mqtt_key)
-        self.__pySRUP_Version = lambda: 1.0
+        self.__pySRUP_Version = lambda: "{}.{}".format(self.__pySRUP_Version_major, self.__pySRUP_Version_minor)
+        self.__pySRUP_Version_major = lambda: 1
+        self.__pySRUP_Version_minor = lambda: 1
         # Lastly create an empty list of "joined" devices...
         # This will always remain blank for devices...
         self.__controlled_devices = []
@@ -116,6 +136,20 @@ class SRUP:
     def id(self):
         return self.__device_id
 
+    @property
+    def device_keys(self):
+        if self.__isServer:
+            return list(self.__keystore)
+        else:
+            return []
+
+    @property
+    def device_types(self):
+        if self.__isServer:
+            return self.__deviceTypes
+        else:
+            return {}
+
     def __add_key_from_keyservice(self, sender):
         # Assuming we don't already have the key in memory; then we must fetch the key-string from the
         # keyserver (which will send it as a base64 encoded string), decode it, and then store it in the
@@ -125,6 +159,15 @@ class SRUP:
         if r.status_code == 200:
             remote_key = base64.b64decode(r.text).decode()
             self.__keystore[hex_sender] = remote_key
+            return True
+        else:
+            return False
+
+    def __get_device_type(self, sender):
+        hex_sender = self.__convert_sender_format(sender)
+        r = requests.get(self.__reg_url + self.__deviceTypeRoute + hex_sender)
+        if r.status_code == 200:
+            self.__deviceTypes[hex_sender] = r.text
             return True
         else:
             return False
@@ -144,6 +187,13 @@ class SRUP:
         hex_sender = self.__convert_sender_format(sender)
         if hex_sender in self.__keystore:
             return self.__keystore[hex_sender]
+        else:
+            return None
+
+    def __get_type(self, sender):
+        hex_sender = self.__convert_sender_format(sender)
+        if hex_sender in self.__deviceTypes:
+            return self.__deviceTypes[hex_sender]
         else:
             return None
 
@@ -171,8 +221,10 @@ class SRUP:
         # First check if the message is for us (or if we're a server read it anyway)
         if topic == self.__device_id or self.__isServer:
             SRUP_generic_message = pySRUPLib.SRUP_Generic()
+
             # if de-serializes then it's probably a SRUP message...
             if SRUP_generic_message.deserialize(msg.payload):
+
                 # Did we send it? If so, ignore it...
                 if SRUP_generic_message.sender_id != int(self.__device_id, 16):
 
@@ -216,12 +268,15 @@ class SRUP:
                             self.__handle_deregister_request_message(msg)
                         elif msg_type == SRUP_DERESISTER_COMMNAND_MESSAGE_TYPE:
                             self.__handle_deregister_command_message(msg)
+                        elif msg_type == SRUP_HUMAN_JOIN_REQUEST_MESSAGE_TYPE:
+                            self.__handle_human_join_request_message(msg)
+                        elif msg_type == SRUP_HUMAN_JOIN_RESPONSE_MESSAGE_TYPE:
+                            self.__handle_human_join_response_message(msg)
                         else:
                             # We have received a message type that we can't handle...
                             # TODO: THROW A CUSTOM EXCEPTION
-                            logging.warning("Invalid message type or format")
-                            logging.warning(SRUP_generic_message.msg_type)
-                            logging.warning(SRUP_generic_message.sequence_id)
+                            logging.warning("Invalid message type or format. (Message type = {}, SeqID = {})".
+                                            format(SRUP_generic_message.msg_type, SRUP_generic_message.sequence_id))
 
                     else:
                         # We have an invalid sequence ID...
@@ -332,16 +387,16 @@ class SRUP:
                 logging.warning("Message did not verify using stored key")
             else:
                 if "{:x}".format(SRUP_id_request_message.sender_id) == self.__server_id or self.__isServer:
-                            # If we've received an ID request message - we should call the custom handler
-                            # (if we have one), or just return a default message, if we don't...
-                            logging.info("ID Request Received...")
-                            if self.__on_id_request is None:
-                                resp = "pySRUP version " + str(self.__pySRUP_Version())
-                            else:
-                                resp = self.__on_id_request()
+                    # If we've received an ID request message - we should call the custom handler
+                    # (if we have one), or just return a default message, if we don't...
+                    logging.info("ID Request Received...")
+                    if self.__on_id_request is None:
+                        resp = "pySRUP version " + str(self.__pySRUP_Version())
+                    else:
+                        resp = self.__on_id_request()
 
-                            tid = SRUP_id_request_message.sender_id
-                            self.send_SRUP_Data(target_id=hex(tid), data_id="IDENTIFICATION_RESPONSE", data=resp)
+                    tid = SRUP_id_request_message.sender_id
+                    self.send_SRUP_Data(target_id=hex(tid), data_id="IDENTIFICATION_RESPONSE", data=resp)
         else:
             # TODO: THROW A CUSTOM EXCEPTION
             logging.error("Sender not found in keystore.")
@@ -373,23 +428,107 @@ class SRUP:
                     else:
                         remote_key = self.__get_key(SRUP_join_request.sender_id)
 
+                # Next we need to check to see if we have the device type - as we may need this later on...
+                if self.__get_type(SRUP_join_request.sender_id) is None:
+                    self.__get_device_type(SRUP_join_request.sender_id)
+
                 if not SRUP_join_request.verify_keystring(remote_key):
                     # TODO: THROW A CUSTOM EXCEPTION
                     logging.warning("Message did not verify using stored key.")
                 else:
                     joining_device = SRUP_join_request.sender_id
-                    logging.info("JOIN Request received from {:x}".format(joining_device))
+                    hex_joining_device = hex(joining_device).lstrip('0x')
+                    logging.info("JOIN Request received from {}".format(hex_joining_device))
 
-                    # For a simple join request we'll always accept; so next we subscribe to the
-                    # topic corresponding to the device; and send a response message on that topic.
-                    self.__mqtt_client.subscribe("SRUP/{:x}/#".format(joining_device))
-                    SRUP_response_message = pySRUPLib.SRUP_Response()
-                    status = SRUP_response_message.srup_response_status_join_success()
-                    self.send_SRUP_Response(hex(joining_device), status, SRUP_join_request.token)
+                    # Add the device ID & token to pending joins...
+                    self.__pending_joins[hex_joining_device] = SRUP_join_request.token
 
-                    # Lastly (since we know we  must be a server to have gotten this far) we
-                    # add the new device to the controlled_devices list.
-                    self.__controlled_devices.append("{:x}".format(joining_device))
+                    # We'll now give the "user program" the chance to accept or reject the join request...
+                    # To do this, we will call the registered callback function if there is one.
+                    # We'll assume that if the user hasn't registered on – then a simple join request will always be
+                    # (automatically) accepted – and responded to.
+
+                    if self.__on_join_request is not None:
+                        # We'll call the user's function (providing them the device ID of the device).
+                        # It'll then be up to the user-code to call the .join_accept(devID) method to accept the join.
+                        # They can do this using device type – which can be retrieved by using the .device_types method
+                        self.__on_join_request(hex_joining_device)
+                    else:
+                        self.accept_join(hex_joining_device)
+
+    def __handle_human_join_request_message(self, mqtt_message):
+        # Devices shouldn't receive join requests - so skip if not server...
+        if self.__isServer:
+            # Check the topic...to see if this is for us...
+            if not bool(re.search('\ASRUP/servers/' + re.escape(self.__device_id) + '/\w+\Z', mqtt_message.topic)):
+                # TODO: THROW A CUSTOM EXCEPTION?
+                # We shouldn't be subscribed to another server's "JOIN" topic – so something went a bit wrong...
+                logging.debug(mqtt_message.topic)
+                logging.info("Message not for this server {}".format(re.findall('\ASRUP/servers/(\w+)/\w+\Z',
+                                                                                mqtt_message.topic)))
+            else:
+                SRUP_human_join_request = pySRUPLib.SRUP_Human_Join_Request()
+                SRUP_human_join_request.deserialize(mqtt_message.payload)
+
+                remote_key = self.__get_key(SRUP_human_join_request.sender_id)
+                if remote_key is None:
+                    # We don't already have the key – so fetch it...
+                    # If we get one, proceed – if not then log the error
+                    if not self.__add_key_from_keyservice(SRUP_human_join_request.sender_id):
+                        # We can't find the key at the keyserver...
+                        # TODO: THROW A CUSTOM EXCEPTION
+                        logging.error("Sender ({}) could not be found at KeyEx lookup service".
+                                      format(self.__convert_sender_format(SRUP_human_join_request.sender_id)))
+                        return
+                    else:
+                        remote_key = self.__get_key(SRUP_human_join_request.sender_id)
+
+                # Next we need to check to see if we have the device type - as we may need this later on...
+                if self.__get_type(SRUP_human_join_request.sender_id) is None:
+                    self.__get_device_type(SRUP_human_join_request.sender_id)
+
+                if not SRUP_human_join_request.verify_keystring(remote_key):
+                    # TODO: THROW A CUSTOM EXCEPTION
+                    logging.warning("Message did not verify using stored key.")
+                else:
+                    joining_device = SRUP_human_join_request.sender_id
+                    hex_joining_device = hex(joining_device).lstrip('0x')
+                    logging.info("HUMAN JOIN Request received from {}".format(hex_joining_device))
+
+                    # Add the device ID & token to pending joins...
+                    self.__pending_joins[hex_joining_device] = SRUP_human_join_request.token
+
+                    # We'll now give the "user program" the chance to accept or reject the join request...
+                    # To do this, we will call the registered callback function if there is one.
+                    # We'll assume that if the user hasn't registered on – then a simple join request will always be
+                    # (automatically) accepted – and responded to.
+
+                    if self.__on_human_join_request is not None:
+                        # We'll call the user's function (providing them the device ID of the device).
+                        # It'll then be up to the user-code to call the .join_accept(devID) method to accept the join.
+                        # They can do this using device type – which can be retrieved by using the .device_types method
+                        self.__on_human_join_request(hex_joining_device)
+                    else:
+                        # Send srup_response_status_join_fail – since we have no handler for this kind of message.
+                        self.fail_join(hex_joining_device)
+                        logging.warning("Human Moderated Join Message Rejected – __on_human_join_request "
+                                        "is not defined.")
+
+    def __handle_human_join_response_message(self, mqtt_message):
+        SRUP_human_join_response = pySRUPLib.SRUP_Human_Join_Response()
+        SRUP_human_join_response.deserialize(mqtt_message.payload)
+        remote_key = self.__get_key(SRUP_human_join_response.sender_id)
+        if remote_key is not None:
+            if SRUP_human_join_response.verify_keystring(remote_key):
+                if "{:x}".format(SRUP_human_join_response.sender_id) == self.__server_id or self.__isServer:
+                    if self.__on_human_join_response is not None:
+                        id_value = SRUP_human_join_response.decrypt(self.__local_private_key)
+                        self.__on_human_join_response(id_value)
+                    else:
+                        logging.error("Handler for Human Join Response is not defined...")
+            else:
+                # TODO: THROW A CUSTOM EXCEPTION
+                logging.warning("Message did not verify using stored key.")
 
     def __handle_terminate_message(self, mqtt_message):
         if not self.__isServer:
@@ -555,21 +694,32 @@ class SRUP:
                 server_string = ""
             else:
                 server_string = self.__server_id
+            hex_seq_ids = {}
+            for d_id, s_id in self.__seq_id.items():
+                hex_seq_ids[self.__convert_sender_format(d_id)] = s_id
+
             config["SRUP"] = {"broker": "mqtt://" + self.__broker,
                               "server_identity": server_string,
-                              "Seq_IDs": self.__seq_id}
+                              "Seq_IDs": hex_seq_ids}
         else:
+            hex_seq_ids = {}
+            for d_id, s_id in self.__seq_id.items():
+                hex_seq_ids[self.__convert_sender_format(d_id)] = s_id
+
             config["SRUP"] = {"broker": "mqtt://" + self.__broker,
-                              "Seq_IDs": self.__seq_id}
+                              "Seq_IDs": hex_seq_ids}
 
         remote_key_set = "{"
         for d_id, d_key in self.__keystore.items():
-            remote_key_set += "'{}':'{}'".format(d_id, base64.b64encode(d_key.encode()).decode())
+            remote_key_set += "'{}':'{}',".format(d_id, base64.b64encode(d_key.encode()).decode())
         remote_key_set += "}"
 
         config["Keys"] = {"local_public": self.__local_public_key,
                           "local_private": self.__local_private_key,
                           "remote_keys": remote_key_set}
+
+        if self.__isServer:
+            config["Devices"] = {"device_types": self.__deviceTypes}
 
         config["Access"] = {"key": self.__mqtt_key,
                             "certificate": self.__mqtt_cert,
@@ -639,6 +789,24 @@ class SRUP:
     def on_join_command(self, f):
         self.__on_join_command = f
 
+    def on_join_request(self, f):
+        self.__on_join_request = f
+
+    def on_human_join_request(self, f):
+        self.__on_human_join_request = f
+
+    def on_human_join_response(self, f):
+        self.__on_human_join_response = f
+
+    def on_join_refused(self, f):
+        self.__on_join_refused = f
+
+    def on_join_failed(self, f):
+        self.__on_join_failed = f
+
+    def on_join_succeed(self, f):
+        self.__on_join_succeed = f
+
     def on_resign_request(self, f):
         self.__on_resign_request = f
 
@@ -669,17 +837,28 @@ class SRUP:
             self.send_SRUP_Response(hex(SRUP_initiate_message.sender_id)[2:], status, SRUP_initiate_message.token)
 
     def __on_response(self, SRUP_response_message):
-        # At the moment the only types of response we can do anything with is the 'update' responses...
+        # First of all we'll automatically handle the "update" message responses...
+        # At this stage – we're only doing anything with update success messages – anything else just gets logged.
         logging.info("RESPONSE MESSAGE Received")
         if SRUP_response_message.status == SRUP_response_message.srup_response_status_update_success():
             target = hex(SRUP_response_message.sender_id)[2:]
             self.__on_update_success(token=SRUP_response_message.token, target=target)
         elif SRUP_response_message.status == SRUP_response_message.srup_response_status_update_fail_server():
-            pass
+            logging.warning("RESPONSE Message – Update Fail: Server")
         elif SRUP_response_message.status == SRUP_response_message.srup_response_status_update_fail_file():
-            pass
+            logging.warning("RESPONSE Message – Update Fail: File")
         elif SRUP_response_message.status == SRUP_response_message.srup_response_status_update_fail_digest():
-            pass
+            logging.warning("RESPONSE Message – Update Fail: Digest")
+
+        # Next let's handle JOIN responses...
+        elif SRUP_response_message.status == SRUP_response_message.srup_response_status_join_refused():
+            logging.info("RESPONSE Message – Join Refused...")
+            self.__on_join_refused()
+        elif SRUP_response_message.status == SRUP_response_message.srup_response_status_join_fail():
+            logging.info("RESPONSE Message – Join Failed...")
+            self.__on_join_failed()
+        elif SRUP_response_message.status == SRUP_response_message.srup_response_status_join_success():
+            self.__on_join_succeed()
         else:
             pass
 
@@ -912,6 +1091,10 @@ class SRUP:
             self.__seq_id.update({iTarget: self.__seq_id[iTarget]+1})
             s = self.__seq_id[iTarget]
 
+            # We must also get the server's key – if we don't already have it...
+            if not iTarget in self.__keystore:
+                self.__add_key_from_keyservice(iTarget)
+
             SRUP_Join_Request.sequence_id = s
             SRUP_Join_Request.sender_id = int(self.__device_id, 16)
             SRUP_Join_Request.sign(self.__local_private_key)
@@ -929,6 +1112,78 @@ class SRUP:
             # We can't perform a join if we're a server...
             # TODO: THROW A CUSTOM EXCEPTION
             logging.warning("Servers can't send join requests...")
+
+    def send_SRUP_human_join(self):
+        # As with the simple join (above) we send to the "nominated" server...
+        if not self.__isServer:
+            SRUP_Human_Join_Request = pySRUPLib.SRUP_Human_Join_Request()
+            SRUP_Human_Join_Request.token = self.__getToken()
+
+            iTarget = int(self.__server_id, 16)
+            if iTarget not in self.__seq_id:
+                self.__seq_id.update({iTarget: 0})
+            self.__seq_id.update({iTarget: self.__seq_id[iTarget]+1})
+            s = self.__seq_id[iTarget]
+
+            # We must also get the server's key – if we don't already have it...
+            if not iTarget in self.__keystore:
+                self.__add_key_from_keyservice(iTarget)
+
+            SRUP_Human_Join_Request.sequence_id = s
+            SRUP_Human_Join_Request.sender_id = int(self.__device_id, 16)
+            SRUP_Human_Join_Request.sign(self.__local_private_key)
+            serial_data = SRUP_Human_Join_Request.serialize()
+
+            if serial_data is not None:
+                topic = "SRUP/servers/{}/{}".format(self.__server_id, self.__device_id)
+                self.__mqtt_client.publish(topic, serial_data)
+                logging.info("Sending HUMAN JOIN Request to {}".format(self.__server_id))
+                time.sleep(1)
+            else:
+                # TODO: THROW A CUSTOM EXCEPTION
+                logging.warning("Message did not serialize")
+        else:
+            # We can't perform a join if we're a server...
+            # TODO: THROW A CUSTOM EXCEPTION
+            logging.warning("Servers can't send human join requests...")
+
+    def send_human_join_response(self, target_id):
+        # We can only send a the HJ_resp if we're a server...
+        if self.__isServer:
+            SRUP_HJ_Response = pySRUPLib.SRUP_Human_Join_Response()
+
+            iTarget = int(target_id, 16)
+            if iTarget not in self.__seq_id:
+                self.__seq_id.update({iTarget: 0})
+            self.__seq_id.update({iTarget: self.__seq_id[iTarget]+1})
+            s = self.__seq_id[iTarget]
+
+            SRUP_HJ_Response.sequence_id = s
+            SRUP_HJ_Response.sender_id = int(self.__device_id, 16)
+            SRUP_HJ_Response.token = self.__getToken()
+
+            # Generate a new UUID for the ID value
+            id_val = uuid.uuid4().hex
+            time.sleep(0.5)
+            SRUP_HJ_Response.encrypt_keystring(id_val, self.__get_key(target_id))
+
+            SRUP_HJ_Response.sign(self.__local_private_key)
+            serial_data = SRUP_HJ_Response.serialize()
+
+            if serial_data is not None:
+                topic = "SRUP/{}".format(target_id)
+                self.__mqtt_client.publish(topic, serial_data)
+                logging.info("Sending HUMAN JOIN RESPONSE to {}".format(target_id))
+                time.sleep(1)
+                self.__pending_joins[target_id] = SRUP_HJ_Response.token
+                return id_val
+            else:
+                # TODO: THROW A CUSTOM EXCEPTION
+                logging.warning("Message did not serialize")
+        else:
+            # We can't request termination if we're not a server...
+            # TODO: THROW A CUSTOM EXCEPTION
+            logging.warning("Only server can send Human Join Responses...")
 
     def send_SRUP_Terminate(self, target_id):
         # We can only send a terminate if we're a server...
@@ -1008,7 +1263,7 @@ class SRUP:
             # We can't request termination if we're not a server...
             # TODO: THROW A CUSTOM EXCEPTION
             # TODO: Log this!
-            logging.warning("Only servers can send terminate commands...")
+            logging.warning("Only servers can send join commands...")
 
     def send_SRUP_Resign_Request(self):
         # We can only send a resign if we're not a server...
@@ -1118,9 +1373,67 @@ class SRUP:
             # TODO: Log this!
             logging.warning("Only servers can send deregister commands...")
 
+    def accept_join(self, deviceID, ID_req=False):
+        if deviceID in self.__pending_joins:
+            # To accept the join; the next step is to subscribe to the topic corresponding to the device;
+            # and send a response message on that topic.
+            self.__mqtt_client.subscribe("SRUP/{}/#".format(deviceID))
+            SRUP_response_message = pySRUPLib.SRUP_Response()
+            status = SRUP_response_message.srup_response_status_join_success()
 
+            # Lastly we add the new device to the controlled_devices list.
+            self.__controlled_devices.append("{}".format(deviceID))
+
+            self.send_SRUP_Response(deviceID, status, self.__pending_joins[deviceID])
+            # Now we've done with the token – we should delete the dictionary entry...
+            del self.__pending_joins[deviceID]
+
+            if ID_req:
+                self.send_SRUP_ID_Request(deviceID)
+
+        else:
+            # TODO: THROW A CUSTOM EXCEPTION
+            logging.warning("Device ID {:x} not found in pending joins.".format(deviceID))
+
+    def refuse_join(self, deviceID):
+        if deviceID in self.__pending_joins:
+            # To refuse the join we just need to send a response message.
+            # (We'll use the device's topic – but *we* don't need to be subscribed to send it)...
+            SRUP_response_message = pySRUPLib.SRUP_Response()
+            status = SRUP_response_message.srup_response_status_join_refused()
+            self.send_SRUP_Response(deviceID, status, self.__pending_joins[deviceID])
+
+            # Now we've done with the token – we should delete the dictionary entry...
+            # The new join (if we get one) will use a new token.
+            del self.__pending_joins[deviceID]
+
+        else:
+            # TODO: THROW A CUSTOM EXCEPTION
+            logging.warning("Device ID {:x} not found in pending joins.".format(deviceID))
+
+    def fail_join(self, deviceID):
+        if deviceID in self.__pending_joins:
+            # To reject the join we just need to send a 'join fail' response message.
+            # (We'll use the device's topic – but *we* don't need to be subscribed to send it)...
+            SRUP_response_message = pySRUPLib.SRUP_Response()
+            status = SRUP_response_message.srup_response_status_join_fail()
+            self.send_SRUP_Response(deviceID, status, self.__pending_joins[deviceID])
+
+            # Now we've done with the token – we should delete the dictionary entry...
+            # The new join (if we get one) will use a new token.
+            del self.__pending_joins[deviceID]
+        else:
+            # TODO: THROW A CUSTOM EXCEPTION
+            logging.warning("Device ID {:x} not found in pending joins.".format(deviceID))
+
+
+# Now that we have defined the base-class, we will derive two subclasses (one for clients - e.g. devices),
+# and one for servers...
+# They are both very similar (as you'd expect) - but there are a few differences.
+# Not least of which is the degree to which servers are not self-constructing - but rather need key exchange,
+# and the establishment of their configuration files to be carried out manually, outside of the pySRUP constructs.
 class Client (SRUP):
-    def __init__(self, config_filename, base_registration_url):
+    def __init__(self, config_filename, base_registration_url, device_type=None):
         config = configparser.ConfigParser()
         settings = {}
         try:
@@ -1130,7 +1443,7 @@ class Client (SRUP):
         except IOError as iox:
             # If errno == 2 (File Not Found) then do KeyEx...
             if iox.errno == 2:
-                KeyEx(config_filename, base_registration_url)
+                KeyEx(config_filename, base_registration_url, device_type)
                 # This will create the config file – but just in case something is really badly broken
                 # we'll try/except this too
                 try:
@@ -1160,19 +1473,24 @@ class Client (SRUP):
                     # missing...
                     except configparser.NoSectionError:
                         # TODO: THROW A CUSTOM EXCEPTION
-                        logging.error("Config file could not be loaded")
+                        logging.error("Config file could not be loaded – section missing")
                         raise
 
                     # ... or the specific option is missing
                     except configparser.NoOptionError:
                         # TODO: THROW A CUSTOM EXCEPTION
-                        logging.error("Config file could not be loaded")
+                        logging.error("Config file could not be loaded – option missing")
                         raise
             try:
                 seqids = config.get("SRUP", "Seq_IDs")
-                settings['Seq_IDs'] = ast.literal_eval(seqids)
+                raw_s_ids = ast.literal_eval(seqids)
+                conv_s_ids = {}
+                for d_id, s_id in raw_s_ids.items():
+                    conv_s_ids[int(d_id, 16)] = s_id
 
-            # Note the same fatal error if the section is missing
+                settings['Seq_IDs'] = conv_s_ids
+
+                # Note the same fatal error if the section is missing
             # (although if we've got here that shouldn't be possible!)
             except configparser.NoSectionError:
                 # TODO: THROW A CUSTOM EXCEPTION
@@ -1210,11 +1528,15 @@ class Client (SRUP):
             logging.error("Registration URL mis-match...")
 
         super().__init__(settings['broker'], settings['identity'], settings['local_private'],
-                         settings['local_public'], settings['remote_keys'], settings['Seq_IDs'],
+                         settings['local_public'], settings['remote_keys'], None, settings['Seq_IDs'],
                          settings['registration_url'], settings['server_identity'], settings['ca_certificate'],
                          settings['certificate'], settings['key'], config_filename, False)
 
 
+# There are a few differences between devices and servers...
+# The most significant one is that we do not do key exchange for servers; rather we require this to be done outside
+# of the pySRUP construct. This is to ensure that only legitimate server's can be issued a server certificate.
+# There would be a significant security vulnerability if this protection wasn't in place.
 class Server (SRUP):
     def __init__(self, config_filename):
         config = configparser.ConfigParser()
@@ -1230,6 +1552,7 @@ class Server (SRUP):
         else:
             config_to_load = {"Server": ["identity", "registration_url"], "SRUP": ["broker"],
                               "Keys": ["local_public", "local_private"],
+                              "Devices": ["device_types"],
                               "Access": ["key", "certificate", "ca_certificate"]}
 
             # We'll iterate through the config_to_load items: for each option we'll try to load it from the config, and
@@ -1253,12 +1576,17 @@ class Server (SRUP):
                         logging.error("Config file could not be loaded")
                         raise
 
-            # Now some special cases – loading dictionaries for Seq_IDs & remote keys...
+            # Now some special cases – loading dictionaries for Seq_IDs, remote keys & device types...
             # Noting that either of these could be "blank" (or not included).
             # First the sequence IDs...
             try:
                 seqids = config.get("SRUP", "Seq_IDs")
-                settings['Seq_IDs'] = ast.literal_eval(seqids)
+                raw_s_ids = ast.literal_eval(seqids)
+                conv_s_ids = {}
+                for d_id, s_id in raw_s_ids.items():
+                    conv_s_ids[int(d_id, 16)] = s_id
+
+                settings['Seq_IDs'] = conv_s_ids
 
             # Note the same fatal error if the section is missing
             # (although if we've got here that shouldn't be possible!)
@@ -1274,7 +1602,6 @@ class Server (SRUP):
 
             # Now the same again for the remote keys
             # As for the client, we must unpack the base64 encoded key(s) back into Python string(s)
-
             try:
                 remote_keys = config.get("Keys", "Remote_Keys")
                 settings['remote_keys'] = ast.literal_eval(remote_keys)
@@ -1293,8 +1620,27 @@ class Server (SRUP):
                 remote_keys = "{}"
                 settings['remote_keys'] = ast.literal_eval(remote_keys)
 
+            # Lastly we do the same process for the device types
+            try:
+                device_types = config.get("Devices", "Device_Types")
+                settings['device_types'] = ast.literal_eval(device_types)
+
+            # If the section is missing; raise an error...
+            except configparser.NoSectionError:
+                # TODO: THROW A CUSTOM EXCEPTION
+                logging.error("Config file could not be loaded")
+                raise
+
+            # But generate the empty dictionary if device types option is not specified.
+            except configparser.NoOptionError:
+                device_types = "{}"
+                settings['device_types'] = ast.literal_eval(device_types)
+
+
         super().__init__(settings['broker'], settings['identity'], local_private_key=settings['local_private'],
                          local_public_key=settings['local_public'], remote_public_keys=settings['remote_keys'],
-                         start_seq_id = settings['Seq_IDs'], registration_url=settings['registration_url'],
-                         server_id=None, ca_cert=settings['ca_certificate'], cert=settings['certificate'],
-                         key=settings['key'], config_filename=config_filename, server=True)
+                         remote_device_types=settings['device_types'], start_seq_id=settings['Seq_IDs'],
+                         registration_url=settings['registration_url'], server_id=None,
+                         ca_cert=settings['ca_certificate'], cert=settings['certificate'], key=settings['key'],
+                         config_filename=config_filename, server=True)
+

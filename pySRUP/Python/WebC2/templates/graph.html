@@ -1,0 +1,21 @@
+{% extends'base.html' %}
+
+{% block title %}Example Graph{% endblock %}
+
+{% block content %}
+    <div class="container">
+        <h1>Data Graph</h1>
+        <h2>Device data for device id: {{ device }} </h2>
+    </div>
+
+    <div class="container">
+        {% if graph_data is none %}
+            <div class="alert alert-danger">
+                <h4><strong>Error:</strong> Data for device {{ device }} was not found...</h4>
+            </div>
+
+        {% else %}
+            <embed type="image/svg+xml" src={{ graph_data|safe }} style='max-width:1000px'/>
+        {% endif %}
+    </div>
+{% endblock %}

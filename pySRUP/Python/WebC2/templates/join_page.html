@@ -1,0 +1,59 @@
+{% extends'base.html' %} {# Add the navbar... #}
+{% import "bootstrap/wtf.html" as wtf %}
+
+{% block title %}JOIN Code{% endblock %}
+
+{% block content %}
+    <div class="container">
+        <h1>Join Code</h1>
+    </div>
+
+    <div class="container">
+        <h2>Device ID</h2>
+        <h3>{{ device }}</h3>
+        <h4> Device Type: {{ dev_type }}</h4>
+    </div>
+
+    {% if hex_code is not none %}
+        <div class="container">
+            <h2>Hex Code</h2>
+            <h3>{{ hex_code }}</h3>
+        </div>
+    {% endif %}
+
+    {% if image1 is not none or image2 is not none %}
+        <div class="container">
+            <h2>Pictogram</h2>
+            {% if image1 is not none %}
+                <img src="data:image/jpeg;base64, {{ image1 }}" alt="Colour Pictogram">
+            {% else %}
+                <img src="data:image/jpeg;base64, {{ image2 }}" alt="Monochrome Pictogram">
+            {% endif %}
+
+        </div>
+    {% endif %}
+
+    {% if wordlist is not none %}
+        <div class="container">
+            <h2>Lexograph</h2>
+            <div class="col-sm-6">
+                <table class="table table-bordered">
+                    {% for words in wordlist %}
+                        <tr>
+                            <td><b>{{ words[0].upper() }}</b></td>
+                            <td><b>{{ words[1].upper() }}</b></td>
+                        </tr>
+                    {% endfor %}
+                </table>
+            </div>
+        </div>
+    {% endif %}
+
+    <div class="container">
+        <h2>Accept / Reject</h2>
+        <p>If the codes displayed on the joining device matches the code shown here –
+            then select accept; otherwise reject the join. </p>
+        {{ wtf.quick_form(form, button_map={"accept":"success", "reject":"danger"}) }}
+        <br/>
+    </div>
+{% endblock %}

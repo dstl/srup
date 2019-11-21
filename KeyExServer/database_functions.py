@@ -66,3 +66,25 @@ def get_key(database_name, dev_id):
                 return None
         else:
             return None
+
+
+# Here's another simple function to return the device type
+def get_type(database_name, dev_id):
+    db_ret = database_connect(database_name)
+
+    if not db_ret.success():
+        return db_ret
+
+    else:
+        db = db_ret.connection()
+        c = db.cursor()
+        res = c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='Devices';").fetchone()
+        if res is not None:
+            c.execute("SELECT device_type FROM Devices WHERE device = ?", (dev_id,))
+            data = c.fetchone()
+            if data is not None:
+                return data[0]
+            else:
+                return None
+        else:
+            return None

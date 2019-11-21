@@ -4,13 +4,24 @@ project(SRUPLib)
 
 if(UNIX AND NOT APPLE)
     # e.g. It's LINUX...
+    EXECUTE_PROCESS( COMMAND uname -m COMMAND tr -d '\n' OUTPUT_VARIABLE ARCHITECTURE)
+    message( STATUS "Architecture: ${ARCHITECTURE}" )
+
+    if( ${ARCHITECTURE} MATCHES "arm" )
+        set( RPI True )
+        message( STATUS "Raspberry Pi: True" )
+    else()
+        set( RPI False )
+        message( STATUS "Raspberry Pi: False" )
+    endif()
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -Wl,--no-as-needed -ldl -DHAVE_INTTYPES_NETINET_IN_H")
 endif()
 
 if (APPLE)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -DHAVE_INTTYPES_NETINET_IN_H")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -DHAVE_INTTYPES_NETINET_IN_H -I/usr/local/opt/openssl/include")
     # Ugly fix – since neither find_package nor pkgconfig can find homebrew openssl on Mac... :-(
-    set(OPENSSL_ROOT_DIR "/usr/local/Cellar/openssl/1.0.2q")
+    set(PKG_CONFIG_PATH "/usr/local/opt/openssl/lib/pkgconfig")
+    set(OPENSSL_ROOT_DIR "/usr/local/Cellar/openssl/1.0.2r")
 endif()
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}")
@@ -27,7 +38,7 @@ else()
 endif()
 
 include_directories(${CMAKE_SOURCE_DIR} ${OpenSSL_INCLUDE_DIR} ${Boost_INCLUDE_DIR})
-link_directories(${CMAKE_SOURCE_DIR} /usr/local/lib)
+link_directories(${CMAKE_SOURCE_DIR} ${OpenSSL_LIB_DIR} /usr/local/lib)
 
 set(LIB_SOURCE_FILES SRUP.cpp SRUP.h SRUP_Init.cpp SRUP_Init.h SRUP_Response.cpp SRUP_Response.h SRUP_Activate.cpp
         SRUP_Activate.h SRUP_Generic.cpp SRUP_Generic.h SRUP_Crypto.cpp SRUP_Crypto.h SRUP_Action.h SRUP_Action.cpp
@@ -40,18 +51,35 @@ set(LIB_SOURCE_FILES SRUP.cpp SRUP.h SRUP_Init.cpp SRUP_Init.h SRUP_Response.cpp
         SRUP_Observation_Req.cpp SRUP_Observation_Req.h SRUP_Group_Destroy.cpp SRUP_Group_Destroy.h)
 
 add_library(SRUP_Lib SHARED ${LIB_SOURCE_FILES})
-target_link_libraries(SRUP_Lib OpenSSL::Crypto)
-
+#target_link_libraries(SRUP_Lib OpenSSL::Crypto)
+target_link_libraries(SRUP_Lib ${OPENSSL_LIBRARIES})
 ####################################################################################################################
 
 project(pySRUPLib)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -DHAVE_INTTYPES_NETINET_IN_H")
 
-find_package(PythonLibs 3.7 REQUIRED)
+find_package(PythonLibs 3.5 REQUIRED)
 include_directories(${PYTHON_INCLUDE_DIR})
+
+if(UNIX AND NOT APPLE)
+    # e.g. It's LINUX...
+    # ...Check to see if we're a Raspberry Pi - proxied by checking for an ARM CPU...
+    EXECUTE_PROCESS( COMMAND uname -m COMMAND tr -d '\n' OUTPUT_VARIABLE ARCHITECTURE)
+    message( STATUS "Architecture: ${ARCHITECTURE}" )
+
+    if( ${ARCHITECTURE} MATCHES "arm" )
+        set( RPI True )
+        message( STATUS "Raspberry Pi: True" )
+    else()
+        set( RPI False )
+        message( STATUS "Raspberry Pi: False" )
+    endif()
+endif()
 
 if(APPLE)
     find_package(Boost COMPONENTS log REQUIRED)
+elseif(RPI)
+    find_package(Boost COMPONENTS python-py35 log REQUIRED)
 else()
     find_package(Boost COMPONENTS python3 log REQUIRED)
 endif()
@@ -88,7 +116,9 @@ if(APPLE)
 endif()
 
 link_directories(/usr/local/lib)
-target_link_libraries(pySRUPLib ${PYTHON_LIBRARY} ${Boost_LIBRARIES} ${BOOST_PYTHON_LIBRARY} OpenSSL::Crypto)
+#target_link_libraries(pySRUPLib ${PYTHON_LIBRARY} ${Boost_LIBRARIES} ${BOOST_PYTHON_LIBRARY} OpenSSL::Crypto)
+target_link_libraries(pySRUPLib ${PYTHON_LIBRARY} ${Boost_LIBRARIES} ${BOOST_PYTHON_LIBRARY} ${OPENSSL_LIBRARIES})
+
 set_target_properties(pySRUPLib PROPERTIES PREFIX "")
 
 ####################################################################################################################
@@ -114,7 +144,7 @@ include_directories(./Test/lib/googletest/include ./Test/lib/googletest ${manual
 
 add_executable(runAllTests ./Test/tests.cpp ${LIB_SOURCE_FILES})
 if (APPLE)
-    target_link_libraries(runAllTests gtest gtest_main libSRUP_Lib.dylib libcrypto.a)
+    target_link_libraries(runAllTests gtest gtest_main libSRUP_Lib.dylib ${OPENSSL_LIBRARIES})
 else()
-    target_link_libraries(runAllTests gtest gtest_main libSRUP_Lib.so libcrypto.a)
+    target_link_libraries(runAllTests gtest gtest_main libSRUP_Lib.so ${OPENSSL_LIBRARIES})
 endif()

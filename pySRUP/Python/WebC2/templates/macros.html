@@ -1,0 +1,42 @@
+{% macro power_state_cell(value) %}
+    {% if not value %}
+        <td class="danger">
+    {% else %}
+        <td class="success">
+    {% endif %}
+
+    {% if value %}
+        ON
+    {% else %}
+        OFF
+    {% endif %}
+    </td>
+{% endmacro %}
+
+{% macro temp_cell(value, min, max) %}
+    {% if (value >= max) %}
+        <td class="danger">
+    {% elif (value <= min) %}
+        <td class="info">
+    {% else %}
+        <td>
+    {% endif %}
+    {{ value }}
+    </td>
+{% endmacro %}
+
+{% macro device_row(device, dev_type, status) %}
+    <tr>
+        <td><a href="graph?device={{ device }}"><b>{{ device }}</b></a></td>
+        <td> {{ dev_type }} </td>
+        <td> {{ status }} </td>
+    </tr>
+{% endmacro %}
+
+{% macro device_time_row(device, status) %}
+<tr>
+    <td><b>{{ device }}</b></td>
+    <td> {{ status }} </td>
+    <td>{{ last | ctime }}</td>
+</tr>
+{% endmacro %}

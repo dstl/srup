@@ -2,6 +2,7 @@
 # Note that we're now using the cryptography library, rather than Cryptodome (which is a little neater) because we
 # want to use a single crypto library for everything, and Cryptodome doesn't support the X509 operations we need to
 #  support the issuance of CSRs and certificates...
+# See: https://cryptography.io/en/latest/ for documentation.
 
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.asymmetric import rsa
@@ -12,6 +13,11 @@ from cryptography.exceptions import InvalidSignature
 from cryptography.exceptions import InvalidKey
 from cryptography import x509
 from cryptography.x509.oid import NameOID
+import base64
+
+public_key_header = '-----BEGIN PUBLIC KEY-----'
+public_key_footer = '-----END PUBLIC KEY-----'
+
 
 # First off we have a simple function which will generate an RSA PEM key-pair for us
 def generate_keys(pv_file, pb_file):
@@ -86,7 +92,7 @@ def get_key_from_file(filename):
 # for a raw PEM format key string
 def write_public_key_to_file(key, filename):
     with open(filename, "w") as key_file:
-        print("{}".format('-----BEGIN PUBLIC KEY-----'), file=key_file)
+        print("{}".format(public_key_header), file=key_file)
         counter = 0
         body = ""
         for char in key:
@@ -97,7 +103,47 @@ def write_public_key_to_file(key, filename):
                 counter = 0
 
         print("{}".format(body), file=key_file)
-        print("{}".format('-----END PUBLIC KEY-----'), file=key_file)
+        print("{}".format(public_key_footer), file=key_file)
+
+
+# Next we need a function to return the base64 encoded string version of the (remote) public-key...
+def get_base64_public_key_string(key):
+    key = public_key_header + '\n' + key + '\n' + public_key_footer
+    return base64.encodebytes(key.encode())
+
+
+# We also need the reverse...
+def load_public_key_from_base64_string(encoded_key_string):
+    decoded_key_bytes = base64.decodebytes(encoded_key_string)
+    public_key = serialization.load_pem_public_key(decoded_key_bytes, backend=default_backend())
+    return public_key
+
+
+# Here is a simple implementation of a 32-bit Fletcher's Checksum – which we'll use to generate
+# filenames for key & certificate files from the device ID...
+# A simple implementation of a 32-bit Fletcher checksum...
+def fletcher32(data, length):
+    w_len = length
+    c0 = 0
+    c1 = 0
+    x = 0
+
+    while w_len >= 360:
+        for i in range(360):
+            c0 = c0 + ord(data[x])
+            c1 = c1 + c0
+            x = x + 1
+        c0 = c0 % 65535
+        c1 = c1 % 65535
+        w_len = w_len - 360
+
+    for i in range(w_len):
+        c0 = c0 + ord(data[x])
+        c1 = c1 + c0
+        x = x + 1
+    c0 = c0 % 65535
+    c1 = c1 % 65535
+    return c1 << 16 | c0
 
 
 # Next up a special function to get the CSR data from the CSR object...
@@ -178,6 +224,7 @@ def load_csr(filename):
 
     except InvalidKey:
         return None
+
 
 # Lastly here, we have a function that essentially does the same thing as  write_public_key_to_file() – the difference
 # being that this one doesn't write to a file – but rather just returns a string, containing the adorned key string.
