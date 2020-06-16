@@ -22,7 +22,7 @@ public:
     ~SRUP_MSG_OBS_BASE();
 
     const uint8_t* encrypted_data(bool, char*);
-    bool encrypted_data(uint8_t*, uint16_t, bool, char*);
+    bool encrypt_data(uint8_t*, uint16_t, bool, char*);
 
     unsigned char* Serialized();
     bool DeSerialize(const uint8_t *);

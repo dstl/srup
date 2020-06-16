@@ -20,9 +20,7 @@
 #include <SRUP_Terminate.h>
 #include <SRUP_Deregister.h>
 #include <SRUP_Deregister_Cmd.h>
-#include <SRUP_Group_Add.h>
-#include <SRUP_Group_Delete.h>
-#include <SRUP_Group_Destroy.h>
+
 #include <SRUP_Observed_Join.h>
 #include <SRUP_Human_Join_Resp.h>
 #include <SRUP_Observed_Join_Resp.h>
@@ -45,7 +43,7 @@
 #define DATA1 "Test Data"
 #define DATA2 256
 #define DATA3 128.26
-#define GROUP_ID "Group_0123456789ABCDEF"
+
 #define DEV_ID 0x01234567
 #define OBS_ID 0x0123456789ABCDEF
 #define PBKEY "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAwsGgqWU0eyw5A0l+/4ch\n69tQtxjf8GwL/QIVFdyT/fHSkxwR4Euwrhsx3vdbZjz/4yynTivy7rT3gfmbLpez\nwr4zPyDpOWjMbGY0xE96rf6g+gotAJUTZ5qmurC9F4ZEv0fSqdnI5xQM2wztBTMc\nyf6Vfumy57jhVlIDnmKZdb18YDZDoknxVmp43nsXwFaQn4X5M8LuBehKV+utHZAI\n7oAhGtRwdI3Sa4w/YUQ7nl5mxOVsupFSuuSUwMbTivHPFhjCa6rQKx/dqr39C7iG\noxj8jezfoRE2W/vn30RCrsE49J3JhAo5F2n4TBuyY85+2Jr7wxx6HIf54GEoELAV\nQwIDAQAB\n-----END PUBLIC KEY-----"
@@ -5565,7 +5563,7 @@ protected:
         sender_ID = new uint64_t;
         *sender_ID = 555ULL;
 
-        encrypted_data = new uint8_t[16];
+        encrypted_data = new uint8_t[32];
 
         encrypted_data[0x0] = 0x33;
         encrypted_data[0x1] = 0x44;
@@ -5584,7 +5582,24 @@ protected:
         encrypted_data[0xE] = 0x11;
         encrypted_data[0xF] = 0x22;
 
-        encrypted_data_length = 16;
+        encrypted_data[0x10] = 0x33;
+        encrypted_data[0x11] = 0x44;
+        encrypted_data[0x12] = 0x55;
+        encrypted_data[0x13] = 0x66;
+        encrypted_data[0x14] = 0x77;
+        encrypted_data[0x15] = 0x88;
+        encrypted_data[0x16] = 0x99;
+        encrypted_data[0x17] = 0xAA;
+        encrypted_data[0x18] = 0xBB;
+        encrypted_data[0x19] = 0xCC;
+        encrypted_data[0x1A] = 0xDD;
+        encrypted_data[0x1B] = 0xEE;
+        encrypted_data[0x1C] = 0xFF;
+        encrypted_data[0x1D] = 0x00;
+        encrypted_data[0x1E] = 0x11;
+        encrypted_data[0x1F] = 0x22;
+
+        encrypted_data_length = 32;
     }
 };
 
@@ -5603,7 +5618,7 @@ TEST_F(SRUP_HUMAN_JOIN_RESP_TESTS, SignF_Complete_Message_Test)
     msg_join_resp->token(token, token_length);
     msg_join_resp->sequenceID(sequence_ID);
     msg_join_resp->senderID(sender_ID);
-    msg_join_resp->encrypted_data(encrypted_data, encrypted_data_length, false, pbkeyfile);
+    msg_join_resp->encrypt_data(encrypted_data, encrypted_data_length, false, pbkeyfile);
     EXPECT_TRUE(msg_join_resp->SignF(pvkeyfile));
 }
 
@@ -5612,7 +5627,7 @@ TEST_F(SRUP_HUMAN_JOIN_RESP_TESTS, Sign_Complete_Message_Test)
     msg_join_resp->token(token, token_length);
     msg_join_resp->sequenceID(sequence_ID);
     msg_join_resp->senderID(sender_ID);
-    msg_join_resp->encrypted_data(encrypted_data, encrypted_data_length, true, pbkey);
+    msg_join_resp->encrypt_data(encrypted_data, encrypted_data_length, true, pbkey);
     EXPECT_TRUE(msg_join_resp->Sign(pvkey));
 }
 
@@ -5625,7 +5640,7 @@ TEST_F(SRUP_HUMAN_JOIN_RESP_TESTS, SignF_Incomplete_Message_Test)
     EXPECT_FALSE(msg_join_resp->SignF(pvkeyfile));
     msg_join_resp->senderID(sender_ID);
     EXPECT_FALSE(msg_join_resp->SignF(pvkeyfile));
-    msg_join_resp->encrypted_data(encrypted_data, encrypted_data_length, false, pbkeyfile);
+    msg_join_resp->encrypt_data(encrypted_data, encrypted_data_length, false, pbkeyfile);
     EXPECT_TRUE(msg_join_resp->SignF(pvkeyfile));
 }
 
@@ -5638,7 +5653,7 @@ TEST_F(SRUP_HUMAN_JOIN_RESP_TESTS, Sign_Incomplete_Message_Test)
     EXPECT_FALSE(msg_join_resp->Sign(pvkey));
     msg_join_resp->senderID(sender_ID);
     EXPECT_FALSE(msg_join_resp->Sign(pvkey));
-    msg_join_resp->encrypted_data(encrypted_data, encrypted_data_length, true, pbkey);
+    msg_join_resp->encrypt_data(encrypted_data, encrypted_data_length, true, pbkey);
     EXPECT_TRUE(msg_join_resp->Sign(pvkey));
 }
 
@@ -5647,7 +5662,7 @@ TEST_F(SRUP_HUMAN_JOIN_RESP_TESTS, SignF_and_VerifyF_Message_Test)
     msg_join_resp->token(token, token_length);
     msg_join_resp->sequenceID(sequence_ID);
     msg_join_resp->senderID(sender_ID);
-    msg_join_resp->encrypted_data(encrypted_data, encrypted_data_length, false, pbkeyfile);
+    msg_join_resp->encrypt_data(encrypted_data, encrypted_data_length, false, pbkeyfile);
 
     EXPECT_TRUE(msg_join_resp->SignF(pvkeyfile));
     EXPECT_TRUE(msg_join_resp->VerifyF(pbkeyfile));
@@ -5667,7 +5682,7 @@ TEST_F(SRUP_HUMAN_JOIN_RESP_TESTS, SignF_and_VerifyF_Message_Test)
     expected_size+=8; // sender_ID
     expected_size+=(2*3); // 2-byte sizes for 3 variable-length fields
     expected_size+=token_length;
-    expected_size+=316; // EncryptFed Data Length...
+    expected_size+=332; // Encrypted Data Length...
 
     EXPECT_EQ(sz, expected_size);
 
@@ -5701,7 +5716,7 @@ TEST_F(SRUP_HUMAN_JOIN_RESP_TESTS, Sign_and_Verify_Message_Test)
     msg_join_resp->token(token, token_length);
     msg_join_resp->sequenceID(sequence_ID);
     msg_join_resp->senderID(sender_ID);
-    msg_join_resp->encrypted_data(encrypted_data, encrypted_data_length, true, pbkey);
+    msg_join_resp->encrypt_data(encrypted_data, encrypted_data_length, true, pbkey);
 
     EXPECT_TRUE(msg_join_resp->Sign(pvkey));
     EXPECT_TRUE(msg_join_resp->Verify(pbkey));
@@ -5721,7 +5736,7 @@ TEST_F(SRUP_HUMAN_JOIN_RESP_TESTS, Sign_and_Verify_Message_Test)
     expected_size+=8; // sender_ID
     expected_size+=(2*3); // 2-byte sizes for 3 variable-length fields
     expected_size+=token_length;
-    expected_size+=316; // EncryptFed Data Length...
+    expected_size+=332; // EncryptFed Data Length...
 
     EXPECT_EQ(sz, expected_size);
 
@@ -5755,7 +5770,7 @@ TEST_F(SRUP_HUMAN_JOIN_RESP_TESTS, Generic_Deserialize_Test_F)
     msg_join_resp->token(token, token_length);
     msg_join_resp->sequenceID(sequence_ID);
     msg_join_resp->senderID(sender_ID);
-    msg_join_resp->encrypted_data(encrypted_data, encrypted_data_length, false, pbkeyfile);
+    msg_join_resp->encrypt_data(encrypted_data, encrypted_data_length, false, pbkeyfile);
 
     EXPECT_TRUE(msg_join_resp->SignF(pvkeyfile));
     EXPECT_TRUE(msg_join_resp->VerifyF(pbkeyfile));
@@ -5771,7 +5786,7 @@ TEST_F(SRUP_HUMAN_JOIN_RESP_TESTS, Generic_Deserialize_Test_F)
     expected_size+=8; // sender_ID
     expected_size+=(2*3); // 2-byte sizes for 3 variable-length fields
     expected_size+=token_length;
-    expected_size+=316; // EncryptFed Data Length...
+    expected_size+=332; // EncryptFed Data Length...
 
     EXPECT_EQ(sz, expected_size);
 
@@ -5791,7 +5806,7 @@ TEST_F(SRUP_HUMAN_JOIN_RESP_TESTS, Generic_Deserialize_Test)
     msg_join_resp->token(token, token_length);
     msg_join_resp->sequenceID(sequence_ID);
     msg_join_resp->senderID(sender_ID);
-    msg_join_resp->encrypted_data(encrypted_data, encrypted_data_length, true, pbkey);
+    msg_join_resp->encrypt_data(encrypted_data, encrypted_data_length, true, pbkey);
 
     EXPECT_TRUE(msg_join_resp->Sign(pvkey));
     EXPECT_TRUE(msg_join_resp->Verify(pbkey));
@@ -5807,7 +5822,7 @@ TEST_F(SRUP_HUMAN_JOIN_RESP_TESTS, Generic_Deserialize_Test)
     expected_size+=8; // sender_ID
     expected_size+=(2*3); // 2-byte sizes for 3 variable-length fields
     expected_size+=token_length;
-    expected_size+=316; // EncryptFed Data Length...
+    expected_size+=332; // EncryptFed Data Length...
 
     EXPECT_EQ(sz, expected_size);
 
@@ -5827,7 +5842,7 @@ TEST_F(SRUP_HUMAN_JOIN_RESP_TESTS, DecryptF_Data_Test)
     msg_join_resp->token(token, token_length);
     msg_join_resp->sequenceID(sequence_ID);
     msg_join_resp->senderID(sender_ID);
-    msg_join_resp->encrypted_data(encrypted_data, encrypted_data_length, false, pbkeyfile);
+    msg_join_resp->encrypt_data(encrypted_data, encrypted_data_length, false, pbkeyfile);
 
     EXPECT_TRUE(msg_join_resp->SignF(pvkeyfile));
 
@@ -5858,7 +5873,7 @@ TEST_F(SRUP_HUMAN_JOIN_RESP_TESTS, Decrypt_Data_Test)
     msg_join_resp->token(token, token_length);
     msg_join_resp->sequenceID(sequence_ID);
     msg_join_resp->senderID(sender_ID);
-    msg_join_resp->encrypted_data(encrypted_data, encrypted_data_length, true, pbkey);
+    msg_join_resp->encrypt_data(encrypted_data, encrypted_data_length, true, pbkey);
 
     EXPECT_TRUE(msg_join_resp->Sign(pvkey));
 
@@ -5993,7 +6008,7 @@ TEST_F(SRUP_OBS_JOIN_RESP_TESTS, SignF_Complete_Message_Test)
     msg_join_resp->token(token, token_length);
     msg_join_resp->sequenceID(sequence_ID);
     msg_join_resp->senderID(sender_ID);
-    msg_join_resp->encrypted_data(encrypted_data, encrypted_data_length, false, pbkeyfile);
+    msg_join_resp->encrypt_data(encrypted_data, encrypted_data_length, false, pbkeyfile);
     EXPECT_TRUE(msg_join_resp->SignF(pvkeyfile));
 }
 
@@ -6002,7 +6017,7 @@ TEST_F(SRUP_OBS_JOIN_RESP_TESTS, Sign_Complete_Message_Test)
     msg_join_resp->token(token, token_length);
     msg_join_resp->sequenceID(sequence_ID);
     msg_join_resp->senderID(sender_ID);
-    msg_join_resp->encrypted_data(encrypted_data, encrypted_data_length, true, pbkey);
+    msg_join_resp->encrypt_data(encrypted_data, encrypted_data_length, true, pbkey);
     EXPECT_TRUE(msg_join_resp->Sign(pvkey));
 }
 
@@ -6015,7 +6030,7 @@ TEST_F(SRUP_OBS_JOIN_RESP_TESTS, SignF_Incomplete_Message_Test)
     EXPECT_FALSE(msg_join_resp->SignF(pvkeyfile));
     msg_join_resp->senderID(sender_ID);
     EXPECT_FALSE(msg_join_resp->SignF(pvkeyfile));
-    msg_join_resp->encrypted_data(encrypted_data, encrypted_data_length, false, pbkeyfile);
+    msg_join_resp->encrypt_data(encrypted_data, encrypted_data_length, false, pbkeyfile);
     EXPECT_TRUE(msg_join_resp->SignF(pvkeyfile));
 }
 
@@ -6028,7 +6043,7 @@ TEST_F(SRUP_OBS_JOIN_RESP_TESTS, Sign_Incomplete_Message_Test)
     EXPECT_FALSE(msg_join_resp->Sign(pvkey));
     msg_join_resp->senderID(sender_ID);
     EXPECT_FALSE(msg_join_resp->Sign(pvkey));
-    msg_join_resp->encrypted_data(encrypted_data, encrypted_data_length, true, pbkey);
+    msg_join_resp->encrypt_data(encrypted_data, encrypted_data_length, true, pbkey);
     EXPECT_TRUE(msg_join_resp->Sign(pvkey));
 }
 
@@ -6037,7 +6052,7 @@ TEST_F(SRUP_OBS_JOIN_RESP_TESTS, SignF_and_VerifyF_Message_Test)
     msg_join_resp->token(token, token_length);
     msg_join_resp->sequenceID(sequence_ID);
     msg_join_resp->senderID(sender_ID);
-    msg_join_resp->encrypted_data(encrypted_data, encrypted_data_length, false, pbkeyfile);
+    msg_join_resp->encrypt_data(encrypted_data, encrypted_data_length, false, pbkeyfile);
 
     EXPECT_TRUE(msg_join_resp->SignF(pvkeyfile));
     EXPECT_TRUE(msg_join_resp->VerifyF(pbkeyfile));
@@ -6091,7 +6106,7 @@ TEST_F(SRUP_OBS_JOIN_RESP_TESTS, Sign_and_Verify_Message_Test)
     msg_join_resp->token(token, token_length);
     msg_join_resp->sequenceID(sequence_ID);
     msg_join_resp->senderID(sender_ID);
-    msg_join_resp->encrypted_data(encrypted_data, encrypted_data_length, true, pbkey);
+    msg_join_resp->encrypt_data(encrypted_data, encrypted_data_length, true, pbkey);
 
     EXPECT_TRUE(msg_join_resp->Sign(pvkey));
     EXPECT_TRUE(msg_join_resp->Verify(pbkey));
@@ -6145,7 +6160,7 @@ TEST_F(SRUP_OBS_JOIN_RESP_TESTS, Generic_Deserialize_Test_F)
     msg_join_resp->token(token, token_length);
     msg_join_resp->sequenceID(sequence_ID);
     msg_join_resp->senderID(sender_ID);
-    msg_join_resp->encrypted_data(encrypted_data, encrypted_data_length, false, pbkeyfile);
+    msg_join_resp->encrypt_data(encrypted_data, encrypted_data_length, false, pbkeyfile);
 
     EXPECT_TRUE(msg_join_resp->SignF(pvkeyfile));
     EXPECT_TRUE(msg_join_resp->VerifyF(pbkeyfile));
@@ -6181,7 +6196,7 @@ TEST_F(SRUP_OBS_JOIN_RESP_TESTS, Generic_Deserialize_Test)
     msg_join_resp->token(token, token_length);
     msg_join_resp->sequenceID(sequence_ID);
     msg_join_resp->senderID(sender_ID);
-    msg_join_resp->encrypted_data(encrypted_data, encrypted_data_length, true, pbkey);
+    msg_join_resp->encrypt_data(encrypted_data, encrypted_data_length, true, pbkey);
 
     EXPECT_TRUE(msg_join_resp->Sign(pvkey));
     EXPECT_TRUE(msg_join_resp->Verify(pbkey));
@@ -6217,7 +6232,7 @@ TEST_F(SRUP_OBS_JOIN_RESP_TESTS, DecryptF_Data_Test)
     msg_join_resp->token(token, token_length);
     msg_join_resp->sequenceID(sequence_ID);
     msg_join_resp->senderID(sender_ID);
-    msg_join_resp->encrypted_data(encrypted_data, encrypted_data_length, false, pbkeyfile);
+    msg_join_resp->encrypt_data(encrypted_data, encrypted_data_length, false, pbkeyfile);
 
     EXPECT_TRUE(msg_join_resp->SignF(pvkeyfile));
 
@@ -6248,7 +6263,7 @@ TEST_F(SRUP_OBS_JOIN_RESP_TESTS, Decrypt_Data_Test)
     msg_join_resp->token(token, token_length);
     msg_join_resp->sequenceID(sequence_ID);
     msg_join_resp->senderID(sender_ID);
-    msg_join_resp->encrypted_data(encrypted_data, encrypted_data_length, true, pbkey);
+    msg_join_resp->encrypt_data(encrypted_data, encrypted_data_length, true, pbkey);
 
     EXPECT_TRUE(msg_join_resp->Sign(pvkey));
 
@@ -6304,6 +6319,8 @@ public:
     uint64_t* sequence_ID;
     uint64_t* sender_ID;
 
+    uint64_t* joining_dev_ID;
+
 protected:
 
     virtual void TearDown()
@@ -6316,6 +6333,7 @@ protected:
 
         delete(sequence_ID);
         delete(sender_ID);
+        delete(joining_dev_ID);
         delete[] encrypted_data;
         delete(msg_obs_req);
     }
@@ -6345,6 +6363,9 @@ protected:
 
         sender_ID = new uint64_t;
         *sender_ID = 555ULL;
+
+        joining_dev_ID = new uint64_t;
+        *joining_dev_ID = 777ULL;
 
         encrypted_data = new uint8_t[16];
 
@@ -6384,7 +6405,8 @@ TEST_F(SRUP_OBSERVE_REQ_TESTS, SignF_Complete_Message_Test)
     msg_obs_req->token(token, token_length);
     msg_obs_req->sequenceID(sequence_ID);
     msg_obs_req->senderID(sender_ID);
-    msg_obs_req->encrypted_data(encrypted_data, encrypted_data_length, false, pbkeyfile);
+    msg_obs_req->encrypt_data(encrypted_data, encrypted_data_length, false, pbkeyfile);
+    msg_obs_req->joining_device_ID(joining_dev_ID);
     EXPECT_TRUE(msg_obs_req->SignF(pvkeyfile));
 }
 
@@ -6393,7 +6415,8 @@ TEST_F(SRUP_OBSERVE_REQ_TESTS, Sign_Complete_Message_Test)
     msg_obs_req->token(token, token_length);
     msg_obs_req->sequenceID(sequence_ID);
     msg_obs_req->senderID(sender_ID);
-    msg_obs_req->encrypted_data(encrypted_data, encrypted_data_length, true, pbkey);
+    msg_obs_req->encrypt_data(encrypted_data, encrypted_data_length, true, pbkey);
+    msg_obs_req->joining_device_ID(joining_dev_ID);
     EXPECT_TRUE(msg_obs_req->Sign(pvkey));
 }
 
@@ -6406,7 +6429,9 @@ TEST_F(SRUP_OBSERVE_REQ_TESTS, SignF_Incomplete_Message_Test)
     EXPECT_FALSE(msg_obs_req->SignF(pvkeyfile));
     msg_obs_req->senderID(sender_ID);
     EXPECT_FALSE(msg_obs_req->SignF(pvkeyfile));
-    msg_obs_req->encrypted_data(encrypted_data, encrypted_data_length, false, pbkeyfile);
+    msg_obs_req->encrypt_data(encrypted_data, encrypted_data_length, false, pbkeyfile);
+    EXPECT_FALSE(msg_obs_req->SignF(pvkeyfile));
+    msg_obs_req->joining_device_ID(joining_dev_ID);
     EXPECT_TRUE(msg_obs_req->SignF(pvkeyfile));
 }
 
@@ -6419,7 +6444,9 @@ TEST_F(SRUP_OBSERVE_REQ_TESTS, Sign_Incomplete_Message_Test)
     EXPECT_FALSE(msg_obs_req->Sign(pvkey));
     msg_obs_req->senderID(sender_ID);
     EXPECT_FALSE(msg_obs_req->Sign(pvkey));
-    msg_obs_req->encrypted_data(encrypted_data, encrypted_data_length, true, pbkey);
+    msg_obs_req->joining_device_ID(joining_dev_ID);
+    EXPECT_FALSE(msg_obs_req->Sign(pvkey));
+    msg_obs_req->encrypt_data(encrypted_data, encrypted_data_length, true, pbkey);
     EXPECT_TRUE(msg_obs_req->Sign(pvkey));
 }
 
@@ -6429,7 +6456,8 @@ TEST_F(SRUP_OBSERVE_REQ_TESTS, SignF_and_VerifyF_Message_Test)
     msg_obs_req->token(token, token_length);
     msg_obs_req->sequenceID(sequence_ID);
     msg_obs_req->senderID(sender_ID);
-    msg_obs_req->encrypted_data(encrypted_data, encrypted_data_length, false, pbkeyfile);
+    msg_obs_req->joining_device_ID(joining_dev_ID);
+    msg_obs_req->encrypt_data(encrypted_data, encrypted_data_length, false, pbkeyfile);
 
     EXPECT_TRUE(msg_obs_req->SignF(pvkeyfile));
     EXPECT_TRUE(msg_obs_req->VerifyF(pbkeyfile));
@@ -6447,6 +6475,7 @@ TEST_F(SRUP_OBSERVE_REQ_TESTS, SignF_and_VerifyF_Message_Test)
     expected_size+=2; // header
     expected_size+=8; // sequence_ID
     expected_size+=8; // sender_ID
+    expected_size+=8; // joining_device_ID
     expected_size+=(2*3); // 2-byte sizes for 3 variable-length fields
     expected_size+=token_length;
     expected_size+=316; // EncryptFed Data Length...
@@ -6483,7 +6512,8 @@ TEST_F(SRUP_OBSERVE_REQ_TESTS, Sign_and_Verify_Message_Test)
     msg_obs_req->token(token, token_length);
     msg_obs_req->sequenceID(sequence_ID);
     msg_obs_req->senderID(sender_ID);
-    msg_obs_req->encrypted_data(encrypted_data, encrypted_data_length, true, pbkey);
+    msg_obs_req->joining_device_ID(joining_dev_ID);
+    msg_obs_req->encrypt_data(encrypted_data, encrypted_data_length, true, pbkey);
 
     EXPECT_TRUE(msg_obs_req->Sign(pvkey));
     EXPECT_TRUE(msg_obs_req->Verify(pbkey));
@@ -6501,6 +6531,7 @@ TEST_F(SRUP_OBSERVE_REQ_TESTS, Sign_and_Verify_Message_Test)
     expected_size+=2; // header
     expected_size+=8; // sequence_ID
     expected_size+=8; // sender_ID
+    expected_size+=8; //joining_device_ID
     expected_size+=(2*3); // 2-byte sizes for 3 variable-length fields
     expected_size+=token_length;
     expected_size+=316; // EncryptFed Data Length...
@@ -6513,7 +6544,6 @@ TEST_F(SRUP_OBSERVE_REQ_TESTS, Sign_and_Verify_Message_Test)
 
     EXPECT_TRUE(msg_obs_req2->DeSerialize(s_serial_data));
     EXPECT_TRUE(msg_obs_req2->Verify(pbkey));
-
     char* recieved_token;
     recieved_token = (char*) msg_obs_req2->token();
 
@@ -6537,7 +6567,8 @@ TEST_F(SRUP_OBSERVE_REQ_TESTS, Generic_Deserialize_Test_F)
     msg_obs_req->token(token, token_length);
     msg_obs_req->sequenceID(sequence_ID);
     msg_obs_req->senderID(sender_ID);
-    msg_obs_req->encrypted_data(encrypted_data, encrypted_data_length, false, pbkeyfile);
+    msg_obs_req->joining_device_ID(joining_dev_ID);
+    msg_obs_req->encrypt_data(encrypted_data, encrypted_data_length, false, pbkeyfile);
 
     EXPECT_TRUE(msg_obs_req->SignF(pvkeyfile));
     EXPECT_TRUE(msg_obs_req->VerifyF(pbkeyfile));
@@ -6551,9 +6582,10 @@ TEST_F(SRUP_OBSERVE_REQ_TESTS, Generic_Deserialize_Test_F)
     expected_size+=2; // header
     expected_size+=8; // sequence_ID
     expected_size+=8; // sender_ID
+    expected_size+=8;
     expected_size+=(2*3); // 2-byte sizes for 3 variable-length fields
     expected_size+=token_length;
-    expected_size+=316; // EncryptFed Data Length...
+    expected_size+=316; // Encrypted Data Length...
 
     EXPECT_EQ(sz, expected_size);
 
@@ -6573,7 +6605,8 @@ TEST_F(SRUP_OBSERVE_REQ_TESTS, Generic_Deserialize_Test)
     msg_obs_req->token(token, token_length);
     msg_obs_req->sequenceID(sequence_ID);
     msg_obs_req->senderID(sender_ID);
-    msg_obs_req->encrypted_data(encrypted_data, encrypted_data_length, true, pbkey);
+    msg_obs_req->joining_device_ID(joining_dev_ID);
+    msg_obs_req->encrypt_data(encrypted_data, encrypted_data_length, true, pbkey);
 
     EXPECT_TRUE(msg_obs_req->Sign(pvkey));
     EXPECT_TRUE(msg_obs_req->Verify(pbkey));
@@ -6587,9 +6620,10 @@ TEST_F(SRUP_OBSERVE_REQ_TESTS, Generic_Deserialize_Test)
     expected_size+=2; // header
     expected_size+=8; // sequence_ID
     expected_size+=8; // sender_ID
+    expected_size+=8; //joining_device_ID
     expected_size+=(2*3); // 2-byte sizes for 3 variable-length fields
     expected_size+=token_length;
-    expected_size+=316; // EncryptFed Data Length...
+    expected_size+=316; // Encrypted Data Length...
 
     EXPECT_EQ(sz, expected_size);
 
@@ -6609,9 +6643,11 @@ TEST_F(SRUP_OBSERVE_REQ_TESTS, DecryptF_Data_Test)
     msg_obs_req->token(token, token_length);
     msg_obs_req->sequenceID(sequence_ID);
     msg_obs_req->senderID(sender_ID);
-    msg_obs_req->encrypted_data(encrypted_data, encrypted_data_length, false, pbkeyfile);
+    msg_obs_req->joining_device_ID(joining_dev_ID);
+    msg_obs_req->encrypt_data(encrypted_data, encrypted_data_length, false, pbkeyfile);
 
     EXPECT_TRUE(msg_obs_req->SignF(pvkeyfile));
+    EXPECT_TRUE(msg_obs_req->VerifyF(pbkeyfile));
 
     uint8_t* comparison_data;
     comparison_data = (uint8_t*) msg_obs_req->encrypted_data(false, pvkeyfile);
@@ -6619,6 +6655,19 @@ TEST_F(SRUP_OBSERVE_REQ_TESTS, DecryptF_Data_Test)
 
     r_serial_data = msg_obs_req->Serialized();
     sz = msg_obs_req->SerializedLength();
+
+    int expected_size=0;
+
+    expected_size+=256; // expected signature length
+    expected_size+=2; // header
+    expected_size+=8; // sequence_ID
+    expected_size+=8; // sender_ID
+    expected_size+=8; //joining_device_ID
+    expected_size+=(2*3); // 2-byte sizes for 3 variable-length fields
+    expected_size+=token_length;
+    expected_size+=316; // Encrypted Data Length...
+
+    EXPECT_EQ(sz, expected_size);
 
     msg_obs_req2 = new SRUP_MSG_OBSERVE_REQ;
     s_serial_data = new unsigned char[sz];
@@ -6640,9 +6689,11 @@ TEST_F(SRUP_OBSERVE_REQ_TESTS, Decrypt_Data_Test)
     msg_obs_req->token(token, token_length);
     msg_obs_req->sequenceID(sequence_ID);
     msg_obs_req->senderID(sender_ID);
-    msg_obs_req->encrypted_data(encrypted_data, encrypted_data_length, true, pbkey);
+    msg_obs_req->joining_device_ID(joining_dev_ID);
+    msg_obs_req->encrypt_data(encrypted_data, encrypted_data_length, true, pbkey);
 
     EXPECT_TRUE(msg_obs_req->Sign(pvkey));
+    EXPECT_TRUE(msg_obs_req->Verify(pbkey));
 
     uint8_t* comparison_data;
     comparison_data = (uint8_t*) msg_obs_req->encrypted_data(true, pvkey);

@@ -27,7 +27,7 @@ const uint8_t *SRUP_MSG_OBS_BASE::encrypted_data(bool key_string, char* key)
         return nullptr;
 }
 
-bool SRUP_MSG_OBS_BASE::encrypted_data(uint8_t *data, uint16_t length, bool key_string, char* key)
+bool SRUP_MSG_OBS_BASE::encrypt_data(uint8_t *data, uint16_t length, bool key_string, char* key)
 {
      if (key_string)
          return(m_crypto->Encrypt(data, length, key));
@@ -285,7 +285,7 @@ bool SRUP_MSG_OBS_BASE::Serialize(bool preSign)
 
         m_serial_length = 0;
         delete (m_serialized);
-        m_serialized= nullptr;
+        m_serialized = nullptr;
     }
 
     m_is_serialized = true;

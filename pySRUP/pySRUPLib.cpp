@@ -11,6 +11,7 @@
 #include "SRUP_Group_Destroy.h"
 #include "SRUP_Observed_Base.h"
 #include "SRUP_Observed_Join.h"
+#include "SRUP_Observation_Req.h"
 
 // Now the pySRUPLib files...
 #include "pySRUP_Action.h"
@@ -165,9 +166,11 @@ BOOST_PYTHON_MODULE (pySRUPLib)
     // Next we have Human Join Response ... which adds nothing to the observed base message class...
     boost::python::class_<SRUP_MSG_HUMAN_JOIN_RESP, boost::python::bases<SRUP_MSG_OBS_BASE>>("SRUP_Human_Join_Response");
 
-    // ... and Observation Request – which also adds nothing to the observed base message...
-    boost::python::class_<SRUP_MSG_OBSERVE_REQ, boost::python::bases<SRUP_MSG_OBS_BASE>>("SRUP_Observation_Request");
+    // ... and Observation Request (the observed base class + the joining device ID)
+    boost::python::class_<SRUP_MSG_OBSERVE_REQ, boost::python::bases<SRUP_MSG_OBS_BASE>>("SRUP_Observation_Request")
+        .add_property("joining_device_id", &get_joining_device_id, &set_joining_device_id);
 
-    // ... and lastly the Observed Join Response (again - just the observed base class)
+    // ... and lastly the Observed Join Response – which adds nothing to the observed base message...
     boost::python::class_<SRUP_MSG_OBS_JOIN_RESP, boost::python::bases<SRUP_MSG_OBS_BASE>>("SRUP_Observed_Join_Response");
+
 }

@@ -97,6 +97,29 @@ def test_join_request_sender():
         x.sender_id = ZERO_SENDER - 1
 
 
+def test_join_request_joining_dev():
+    MAX_DEV = 0xFFFFFFFFFFFFFFFF
+    ZERO_DEV = 0x00
+    VALID_DEV = 0x7FFFFFFFFFFFFFE7
+
+    x = pySRUPLib.SRUP_Observation_Request()
+
+    x.joining_device_id = MAX_DEV
+    assert x.joining_device_id == MAX_DEV
+
+    x.joining_device_id = VALID_DEV
+    assert x.joining_device_id == VALID_DEV
+
+    x.joining_device_id = ZERO_DEV
+    assert x.joining_device_id == ZERO_DEV
+
+    with pytest.raises(OverflowError):
+        x.joining_device_id = MAX_DEV + 1
+
+    with pytest.raises(OverflowError):
+        x.joining_device_id = ZERO_DEV - 1
+
+
 def test_join_request_token():
     x = pySRUPLib.SRUP_Observation_Request()
     assert x.token is None
@@ -118,6 +141,9 @@ def test_join_request_signing():
     assert x.sign(keyfile) is False
 
     x.sender_id = 0x5F5F5F5F5F5F5F5F
+    assert x.sign(keyfile) is False
+
+    x.joining_device_id = 0xABCF5F5F5F5F5F5F
     assert x.sign(keyfile) is False
 
     x.encrypt("0123456789ABCDEF", pubkeyfile)
@@ -148,6 +174,9 @@ def test_join_request_signing_keystring():
     x.sender_id = 0x5F5F5F5F5F5F5F5F
     assert x.sign_keystring(priv_keystring) is False
 
+    x.joining_device_id = 0xABCF5F5F5F5F5F5F
+    assert x.sign(keyfile) is False
+
     x.encrypt_keystring("0123456789ABCDEF", pub_keystring)
 
     assert x.sign_keystring(blank) is False
@@ -165,6 +194,7 @@ def test_join_request_serializer():
     x.token = "TOKEN12345"
     x.sequence_id = 0x1234567890ABCDEF
     x.sender_id = 0x5F5F5F5F5F5F5F5F
+    x.joining_device_id = 0xABCF5F5F5F5F5F5F
     x.encrypt("0123456789ABCDEF", pubkeyfile)
     assert x.sign(keyfile) is True
     z = x.serialize()
@@ -175,6 +205,7 @@ def test_join_request_serializer_keystring():
     x.token = "TOKEN12345"
     x.sequence_id = 0x1234567890ABCDEF
     x.sender_id = 0x5F5F5F5F5F5F5F5F
+    x.joining_device_id = 0xABCF5F5F5F5F5F5F
     x.encrypt_keystring("0123456789ABCDEF", pub_keystring)
     assert x.sign_keystring(priv_keystring) is True
     z = x.serialize()
@@ -184,7 +215,8 @@ def test_join_request_deserializer():
     token = "TOKEN12345"
     seq_id = 0x1234567890ABCDEF
     send_id = 0x5F5F5F5F5F5F5F5F
-    data = "0123456789ABCDEF"
+    joining_device_id = 0xABCF5F5F5F5F5F5F
+    data = "0123456789ABCDEF0123456789ABCDEF"
 
     x = pySRUPLib.SRUP_Observation_Request()
     y = pySRUPLib.SRUP_Observation_Request()
@@ -192,6 +224,7 @@ def test_join_request_deserializer():
     x.token = token
     x.sequence_id = seq_id
     x.sender_id = send_id
+    x.joining_device_id = joining_device_id
 
     x.encrypt(data, pubkeyfile)
     assert x.sign(keyfile) is True
@@ -202,6 +235,7 @@ def test_join_request_deserializer():
     assert y.token == token
     assert y.sender_id == send_id
     assert y.sequence_id == seq_id
+    assert y.joining_device_id == joining_device_id
 
     new_data = y.decrypt(keyfile)
     assert new_data == data
@@ -211,7 +245,8 @@ def test_join_request_deserializer_keystring():
     token = "TOKEN12345"
     seq_id = 0x1234567890ABCDEF
     send_id = 0x5F5F5F5F5F5F5F5F
-    data = "0123456789ABCDEF"
+    data = "0123456789ABCDEF0123456789ABCDEF"
+    joining_device_id = 0xABCF5F5F5F5F5F5F
 
     x = pySRUPLib.SRUP_Observation_Request()
     y = pySRUPLib.SRUP_Observation_Request()
@@ -219,6 +254,7 @@ def test_join_request_deserializer_keystring():
     x.token = token
     x.sequence_id = seq_id
     x.sender_id = send_id
+    x.joining_device_id = joining_device_id
 
     x.encrypt_keystring(data, pub_keystring)
     assert x.sign_keystring(priv_keystring) is True
@@ -229,6 +265,7 @@ def test_join_request_deserializer_keystring():
     assert y.token == token
     assert y.sender_id == send_id
     assert y.sequence_id == seq_id
+    assert y.joining_device_id == joining_device_id
 
     new_data = y.decrypt_keystring(priv_keystring)
     assert new_data == data
@@ -239,6 +276,7 @@ def test_join_request_generic_deserializer():
     seq_id = 0x1234567890ABCDEF
     send_id = 0x5F5F5F5F5F5F5F5F
     data = "0123456789ABCDEF"
+    joining_device_id = 0xABCF5F5F5F5F5F5F
 
     x = pySRUPLib.SRUP_Observation_Request()
     i = pySRUPLib.SRUP_Generic()
@@ -246,6 +284,7 @@ def test_join_request_generic_deserializer():
     x.token = token
     x.sequence_id = seq_id
     x.sender_id = send_id
+    x.joining_device_id = joining_device_id
 
     x.encrypt(data, pubkeyfile)
     assert x.sign(keyfile) is True
@@ -259,10 +298,11 @@ def test_encrypt_decrypt():
     token = "TOKEN12345"
     seq_id = 0x1234567890ABCDEF
     send_id = 0x5F5F5F5F5F5F5F5F
+    joining_device_id = 0xABCF5F5F5F5F5F5F
 
-    data = "0123456789ABCDEF"
+    data = "0123456789ABCDEF0123456789ABCDEF"
 
-    long_data = "12345678901234567890"
+    long_data = "1234567890123456789012345678901234567890"
     short_data = "123"
     very_long_data = "QWERTYUIOPASDFGHJKLZXCVBNM1234567890-=!@#$%^&*()_+[]{};':,./<>?\|"
 
@@ -272,28 +312,30 @@ def test_encrypt_decrypt():
     x.token = token
     x.sequence_id = seq_id
     x.sender_id = send_id
+    x.joining_device_id = joining_device_id
 
     # The encrypted data is expected to be 16-bytes...
+    # ...encoded as a 32 character string...
     # So assigning longer sequences will result in truncation...
     x.encrypt(long_data, pubkeyfile)
-    assert x.decrypt(keyfile) == long_data[:16]
+    assert x.decrypt(keyfile) == long_data[:32]
     assert x.sign(keyfile) is True
     z = x.serialize()
     assert y.deserialize(z) is True
     assert y.verify(pubkeyfile) is True
-    assert y.decrypt(keyfile) == long_data[:16]
+    assert y.decrypt(keyfile) == long_data[:32]
 
     x.encrypt(very_long_data, pubkeyfile)
-    assert x.decrypt(keyfile) == very_long_data[:16]
+    assert x.decrypt(keyfile) == very_long_data[:32]
     assert x.sign(keyfile) is True
     z = x.serialize()
     assert y.deserialize(z) is True
     assert y.verify(pubkeyfile) is True
-    assert y.decrypt(keyfile) == very_long_data[:16]
+    assert y.decrypt(keyfile) == very_long_data[:32]
 
     # ... whilst shorter sequences will be padded with 0x00's
     x.encrypt(short_data, pubkeyfile)
-    padded_short_data = short_data.ljust(16, chr(0x00))
+    padded_short_data = short_data.ljust(32, chr(0x00))
     assert x.decrypt(keyfile) == padded_short_data
     assert x.sign(keyfile) is True
     z = x.serialize()
@@ -319,6 +361,22 @@ def test_encrypt_decrypt():
     byte_data += chr(0x0D)
     byte_data += chr(0x0E)
     byte_data += chr(0x0F)
+    byte_data += chr(0x00)
+    byte_data += chr(0x01)
+    byte_data += chr(0x02)
+    byte_data += chr(0x03)
+    byte_data += chr(0x04)
+    byte_data += chr(0x05)
+    byte_data += chr(0x06)
+    byte_data += chr(0x07)
+    byte_data += chr(0x08)
+    byte_data += chr(0x09)
+    byte_data += chr(0x0A)
+    byte_data += chr(0x0B)
+    byte_data += chr(0x0C)
+    byte_data += chr(0x0D)
+    byte_data += chr(0x0E)
+    byte_data += chr(0x0F)
 
     x.encrypt(byte_data, pubkeyfile)
     assert x.decrypt(keyfile) == byte_data
@@ -328,7 +386,7 @@ def test_encrypt_decrypt():
     assert y.verify(pubkeyfile) is True
     assert y.decrypt(keyfile) == byte_data
 
-    # Lastly we'll test with a "regular" 16-character string.
+    # Lastly we'll test with a "regular" 32-character string.
     x.encrypt(data, pubkeyfile)
     assert x.decrypt(keyfile) == data
     assert x.sign(keyfile) is True
@@ -342,10 +400,11 @@ def test_encrypt_decrypt_keystring():
     token = "TOKEN12345"
     seq_id = 0x1234567890ABCDEF
     send_id = 0x5F5F5F5F5F5F5F5F
+    joining_device_id = 0xABCF5F5F5F5F5F5F
 
-    data = "0123456789ABCDEF"
+    data = "0123456789ABCDEF0123456789ABCDEF"
 
-    long_data = "12345678901234567890"
+    long_data = "1234567890123456789012345678901234567890"
     short_data = "123"
     very_long_data = "QWERTYUIOPASDFGHJKLZXCVBNM1234567890-=!@#$%^&*()_+[]{};':,./<>?\|"
 
@@ -355,28 +414,30 @@ def test_encrypt_decrypt_keystring():
     x.token = token
     x.sequence_id = seq_id
     x.sender_id = send_id
+    x.joining_device_id = joining_device_id
 
     # The encrypted data is expected to be 16-bytes...
+    # (a 32-character string) ...
     # So assigning longer sequences will result in truncation...
     x.encrypt_keystring(long_data, pub_keystring)
-    assert x.decrypt_keystring(priv_keystring) == long_data[:16]
+    assert x.decrypt_keystring(priv_keystring) == long_data[:32]
     assert x.sign_keystring(priv_keystring) is True
     z = x.serialize()
     assert y.deserialize(z) is True
     assert y.verify_keystring(pub_keystring) is True
-    assert y.decrypt_keystring(priv_keystring) == long_data[:16]
+    assert y.decrypt_keystring(priv_keystring) == long_data[:32]
 
     x.encrypt_keystring(very_long_data, pub_keystring)
-    assert x.decrypt_keystring(priv_keystring) == very_long_data[:16]
+    assert x.decrypt_keystring(priv_keystring) == very_long_data[:32]
     assert x.sign_keystring(priv_keystring) is True
     z = x.serialize()
     assert y.deserialize(z) is True
     assert y.verify_keystring(pub_keystring) is True
-    assert y.decrypt_keystring(priv_keystring) == very_long_data[:16]
+    assert y.decrypt_keystring(priv_keystring) == very_long_data[:32]
 
     # ... whilst shorter sequences will be padded with 0x00's
     x.encrypt_keystring(short_data, pub_keystring)
-    padded_short_data = short_data.ljust(16, chr(0x00))
+    padded_short_data = short_data.ljust(32, chr(0x00))
     assert x.decrypt_keystring(priv_keystring) == padded_short_data
     assert x.sign_keystring(priv_keystring) is True
     z = x.serialize()
@@ -402,6 +463,22 @@ def test_encrypt_decrypt_keystring():
     byte_data += chr(0x0D)
     byte_data += chr(0x0E)
     byte_data += chr(0x0F)
+    byte_data += chr(0x00)
+    byte_data += chr(0x01)
+    byte_data += chr(0x02)
+    byte_data += chr(0x03)
+    byte_data += chr(0x04)
+    byte_data += chr(0x05)
+    byte_data += chr(0x06)
+    byte_data += chr(0x07)
+    byte_data += chr(0x08)
+    byte_data += chr(0x09)
+    byte_data += chr(0x0A)
+    byte_data += chr(0x0B)
+    byte_data += chr(0x0C)
+    byte_data += chr(0x0D)
+    byte_data += chr(0x0E)
+    byte_data += chr(0x0F)
 
     x.encrypt_keystring(byte_data, pub_keystring)
     assert x.decrypt_keystring(priv_keystring) == byte_data
@@ -411,7 +488,7 @@ def test_encrypt_decrypt_keystring():
     assert y.verify_keystring(pub_keystring) is True
     assert y.decrypt_keystring(priv_keystring) == byte_data
 
-    # Lastly we'll test with a "regular" 16-character string.
+    # Lastly we'll test with a "regular" 32-character string.
     x.encrypt_keystring(data, pub_keystring)
     assert x.decrypt_keystring(priv_keystring) == data
     assert x.sign_keystring(priv_keystring) is True
@@ -426,6 +503,7 @@ def test_empty_object():
     assert x.token is None
     assert x.sequence_id is None
     assert x.sender_id is None
+    assert x.joining_device_id is None
     assert x.sign("") is False
     assert x.decrypt(keyfile) is None
 
@@ -435,5 +513,6 @@ def test_empty_object_keystring():
     assert x.token is None
     assert x.sequence_id is None
     assert x.sender_id is None
+    assert x.joining_device_id is None
     assert x.sign("") is False
     assert x.decrypt_keystring(priv_keystring) is None

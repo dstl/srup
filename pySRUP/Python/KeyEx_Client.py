@@ -46,10 +46,16 @@ def get_status(url, base_url):
 
 # Next we have a function for the actual registration operation...
 # This one is pretty straight forward. We send a POST with the JSON object consisting of our (device) identity,
-# a copy of our public key, and the device type... Here that's hard-coded to TEST – since we're not yet using this
-# capability
-def registration(url, identity, key_file):
-    data = {'identity': identity, 'key': CryptoFunctions.get_key_from_file(key_file), 'type': 'TEST'}
+# a copy of our public key, and the device type...
+# We also require a device type to be specified – although this is optionally specified by the user.
+# If not specified then it should be None; but we'll be type safe here - just in case.
+
+def registration(url, identity, dev_type, key_file):
+    if dev_type is not None and isinstance(dev_type, str):
+        device_type = dev_type
+    else:
+        device_type = "default"
+    data = {'identity': identity, 'key': CryptoFunctions.get_key_from_file(key_file), 'type': device_type}
     headers = {'Content-Type': 'application/json'}
     r = requests.post(url, data=json.dumps(data), headers=headers)
     if r.status_code == 201:
@@ -60,14 +66,14 @@ def registration(url, identity, key_file):
 
 # The next function here – is one for the validation operation...
 # We'll start by sending a JSON object consisting of the device identity, and a signature based on our private key...
-def validation(url, identity, key_file, server_public_key_file):
+def validation(url, identity, key_file, encoded_server_public_key):
     signature = CryptoFunctions.sign(identity, key_file)
 
     # We need to also send a suitable header to indicate that we're sending JSON...
     headers = {'Content-Type': 'application/json'}
 
     # And note that we must use base64 encoding for the signature – since it is composed from an arbitrary bytestream
-    # when we recieve the signature from the server we must reverse this process...
+    # when we receive the signature from the server we must reverse this process...
     data = {'identity': identity, 'signature': base64.encodebytes(signature).decode()}
     r = requests.post(url, data=json.dumps(data), headers=headers)
 
@@ -78,7 +84,7 @@ def validation(url, identity, key_file, server_public_key_file):
         # have already, corresponding to the server – and we simple return the outcome of that verification step.
         return CryptoFunctions.verify(message=r.json()['identity'],
                                       signature=base64.decodebytes(r.json()['signature'].encode()),
-                                      key=CryptoFunctions.load_public_key(server_public_key_file))
+                                      key=CryptoFunctions.load_public_key_from_base64_string(encoded_server_public_key))
     else:
         return False
 
@@ -112,24 +118,16 @@ def access_keys(url, identity, key_file, csr_file, crt_file, ca_crt_file):
         return False
 
 
-# Now the main function we'll call
-def KeyEx(config_filename, base_url):
+# Now the main function we'll call...
+# Here note that although a device_type must be specified, the actual specification of a value for this is optional
+# The value defaults to None if a specific type is not specified.
+def KeyEx(config_filename, base_url, device_type):
     status_part = "/KeyEx/register/status"
     registration_part = "/KeyEx/register/register"
     validation_part = "/KeyEx/register/validate"
     access_key_part = "/KeyEx/register/access"
 
-    public_key_file = "public.pem"
-    private_key_file = "private.pem"
-    server_key_file = "server.pem"
-
-    access_key_file = "device.key"
-    access_csr_file = "device.csr"
-    access_crt_file = "device.crt"
-    access_ca_crt_file = "ca.crt"
-
-    LOG_FILE = "KeyEx-Client.log"
-
+    # We'll generate filenames once we have our ID…
     CONFIG_FILE = config_filename
     port = None
 
@@ -153,17 +151,21 @@ def KeyEx(config_filename, base_url):
     # We need a 64-bit integer encoded as a hex string – so we'll use a half-UUID (taking the first 64-bit for better
     # uniqueness
     device_ID = hex(uuid.uuid4().int >> 64)[2:]
+    logging.info("Device ID {} allocated.".format(device_ID))
 
-    # Next up the logging...
-    # In production we'll expect this to be a headless device – so there's no point logging to stdout / stderr
-    # So we'll just log to a file.
-    logger = logging.getLogger()
-    logger.setLevel(logging.INFO)
-    formatter = logging.Formatter('%(asctime)s\t%(levelname)s\t\t%(message)s')
-    logfile = logging.FileHandler(LOG_FILE)
-    logfile.setLevel(logging.INFO)
-    logfile.setFormatter(formatter)
-    logger.addHandler(logfile)
+    short_name = "{:08X}".format(CryptoFunctions.fletcher32(device_ID, len(device_ID)))
+    logging.info("Short name for Device ID {} is {}.".format(device_ID, short_name))
+
+    public_key_file = "{}.pub".format(short_name)
+    private_key_file = "{}.prv".format(short_name)
+
+    remote_keys = {}
+    # server_key_file = "server.pem"
+
+    access_key_file = "{}.key".format(short_name)
+    access_csr_file = "{}.csr".format(short_name)
+    access_crt_file = "{}.crt".format(short_name)
+    access_ca_crt_file = "{}.ca".format(short_name)
 
     # Now setup a config file parser – so we can write the config out to a file...
     config = configparser.ConfigParser()
@@ -171,7 +173,7 @@ def KeyEx(config_filename, base_url):
     # We're ready to go - so first we must create our own key pair
     CryptoFunctions.generate_keys(private_key_file, public_key_file)
 
-    logging.info("Device ID {} generated.".format(device_ID))
+    logging.info("Key-pair for Device ID {} generated.".format(device_ID))
     logging.info("Attempting to connect to {}".format(base_url))
     try:
         status = get_status(status_url, base_url)
@@ -179,25 +181,33 @@ def KeyEx(config_filename, base_url):
         # Next we'll check the status of the key server; and if it's active we'll extract the key
         # from the public key file...
         if status['valid']:
+            server_id = status['identity']
             device_public_key = CryptoFunctions.load_public_key(public_key_file)
 
             # If we were successful in getting the key from the file, we will now call the registration function
             # passing in the url, key, and device ID - and getting the HTTP code & response – along with
             # the broker address & server's public key if everything is okay...
             if device_public_key is not None:
-                code, broker, server_key, response = registration(registration_url, device_ID, public_key_file)
+                code, broker, server_key, response = registration(registration_url, device_ID, device_type,
+                                                                  public_key_file)
 
                 # If we get back a response code of HTTP 201 ("CREATED") - then we'll continue
                 if code == 201:
                     logging.debug("Received broker address: {}".format(broker))
 
-                    # Next we'll write the server's key to a suitable PEM file
-                    CryptoFunctions.write_public_key_to_file(server_key, server_key_file)
+                    # Next we'll get the public key for the server...
+                    encoded_key = CryptoFunctions.get_base64_public_key_string(server_key)
+                    remote_keys[server_id] = encoded_key
+
+                    # TODO: TIDY THIS!
+                    # We no-longer want to store the public_key in a file – as we're using the stringified version
+                    # in the config file – so we'll skip this part...
+                    #
+                    # CryptoFunctions.write_public_key_to_file(server_key, server_key_file)
 
                     # Lastly we'll call the validation url – to make sure that the keys we have
-                    #  (and which the server has) are actually two valid pairs...
-                    if validation(validation_url, device_ID, private_key_file, server_key_file):
-
+                    # (and which the server has) are actually two valid pairs...
+                    if validation(validation_url, device_ID, private_key_file, encoded_key):
                         # For now as this is just a demo – we'll simply print the outcome of the process...
                         logging.info("Key Validation Successful")
 
@@ -213,14 +223,15 @@ def KeyEx(config_filename, base_url):
                             # If we made it through okay; then we'll write the config file...
 
                             config['Device'] = {'Identity': device_ID,
-                                                'registration_url': base_url}
+                                                'registration_url': base_url,
+                                                'short_name': short_name}
 
                             config['SRUP'] = {'Broker': broker,
                                               'Server_Identity': status['identity']}
 
-                            config['Keys'] = {'device_public': public_key_file,
-                                              'device_private': private_key_file,
-                                              'server': server_key_file}
+                            config['Keys'] = {'local_public': public_key_file,
+                                              'local_private': private_key_file,
+                                              'remote_keys': remote_keys}
                             config['Access'] = {'key': access_key_file,
                                                 'certificate': access_crt_file,
                                                 'ca_certificate': access_ca_crt_file}
