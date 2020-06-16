@@ -20,7 +20,7 @@ lcd = pg.pictogram()
 
 # We'll hard-code the server for this simple device into the code…
 server_id = "b9d077e223834cf6"
-
+BASE_URL = "" # Must be a valid base URL
 FILENAME = "sw2.py"
 flag = False
 
@@ -35,47 +35,6 @@ def on_action(msg_action):
             lcd.fill_screen((0,0,255))
     else:
         logger.warning("Message not from server id {}".format(server_id))
-
-
-# def on_data(msg_data):
-#     if msg_data.data_id == "Temperature":
-#         data = msg_data.double_data
-#     elif msg_data.data_id == "Box":
-#         data = msg_data.int32_data
-#     elif msg_data.data_id == "Test Message":
-#         data = msg_data.bytes_data
-#     elif msg_data.data_id == "Delay":
-#         data = msg_data.double_data
-#     else:
-#         logging.error("Unknown Data ID")
-#         return
-#     logging.info("Data ID: {} = {}".format(msg_data.data_id, data))
-
-
-# def on_update(filename):
-#     # If we get here the update process has been carried out okay behind the scenes; and we have just received a
-#     # "go" signal - in which case we need to restart ourselves...
-#     # But first we need to copy the file to overwrite this one...
-#     shutil.copy(filename, *sys.argv)
-#     python = sys.executable
-#     os.execl(python, python, *sys.argv)
-
-
-# def time_to_resign(srup_client):
-#     logging.info("Time is up, send resign message now...")
-#     resign(srup_client)
-
-
-# def resign(srup_client):
-#     old_server_id = srup_client.server_id
-#     srup_client.send_SRUP_Resign_Request()
-#     # To avoid having to reset the demo every-time – we'll restore the server for the config file..
-#     srup_client.server_id = old_server_id
-#     logging.info("Saving settings...")
-#     client.save_settings()
-#     logging.info("Exiting client_demo.")
-#     global running
-#     running = False
 
 
 def on_id_req():
@@ -110,7 +69,7 @@ def on_join_succeed():
     logger.info("Join Accepted")
     lcd.fill_screen((255,255,0))
 
-client = pySRUP.Client("sw2.cfg", "https://iot-lab.uk", device_type="LCD")
+client = pySRUP.Client("sw2.cfg", BASE_URL, device_type="LCD")
 client.on_action(on_action)
 client.on_id_request(on_id_req)
 client.on_join_refused(on_join_refused)

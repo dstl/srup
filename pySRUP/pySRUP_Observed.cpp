@@ -49,3 +49,20 @@ boost::python::object get_decrypted_data_keystring (SRUP_MSG_OBS_BASE& self, cha
     else
         return boost::python::object();
 }
+
+boost::python::object get_joining_device_id(SRUP_MSG_OBSERVE_REQ& self)
+{
+    const uint64_t* rv;
+    rv = self.joining_device_ID();
+
+    if (rv != nullptr)
+        return boost::python::object(*rv);
+    else
+        return boost::python::object();
+}
+
+
+void set_joining_device_id(SRUP_MSG_OBSERVE_REQ& self, uint64_t sender)
+{
+    self.joining_device_ID(&sender);
+}

@@ -21,7 +21,7 @@ The `CMakeList.txt` file now contains the necessary modifications to automatical
 
 To ensure all of the dependencies are in place, run:
 
-`sudo apt-get install git make libboost-all-dev libssl-dev`
+`sudo apt-get install git make libboost-all-dev libssl-dev cmake`
 
 
 ## Build process
@@ -38,6 +38,7 @@ Use:
 
 * `pip3 install --user paho.mqtt` 
 * `pip3 install --user cryptography`
+* `pip3 install --user coloredlogs`
 
 If you want to use the Python unit tests – you'll also need `pytest` installed
 

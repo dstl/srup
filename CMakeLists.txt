@@ -21,7 +21,8 @@ if (APPLE)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -DHAVE_INTTYPES_NETINET_IN_H -I/usr/local/opt/openssl/include")
     # Ugly fix – since neither find_package nor pkgconfig can find homebrew openssl on Mac... :-(
     set(PKG_CONFIG_PATH "/usr/local/opt/openssl/lib/pkgconfig")
-    set(OPENSSL_ROOT_DIR "/usr/local/Cellar/openssl/1.0.2r")
+    set(OPENSSL_ROOT_DIR "/usr/local/Cellar/openssl/1.0.2t")
+    set(OPENSSL_USE_STATIC_LIBS TRUE)
 endif()
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}")
@@ -79,7 +80,7 @@ endif()
 if(APPLE)
     find_package(Boost COMPONENTS log REQUIRED)
 elseif(RPI)
-    find_package(Boost COMPONENTS python-py35 log REQUIRED)
+    find_package(Boost COMPONENTS python3 log REQUIRED)
 else()
     find_package(Boost COMPONENTS python3 log REQUIRED)
 endif()
@@ -125,26 +126,26 @@ set_target_properties(pySRUPLib PROPERTIES PREFIX "")
 #
 # Uncomment this section if you want to build the google test suite...
 # Note: you'll need to install the framework in Test/lib/googletest...
-
-project(SRUP_Tests)
-
+#
+#project(SRUP_Tests)
+#
 # Here's a really ugly kludge to fix the fact that this block cannot find openssl - even using the method in the
 # main section. :-(
-set(manual_openssl_include_path "/usr/local/Cellar/openssl/1.0.2q/include/")
-
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall")
-add_subdirectory(Test/lib/googletest)
-
-if (APPLE)
-    add_definitions(-DGTEST_USE_OWN_TR1_TUPLE)
-    add_definitions(-D__GLIBCXX__)
-endif (APPLE)
-
-include_directories(./Test/lib/googletest/include ./Test/lib/googletest ${manual_openssl_include_path})
-
-add_executable(runAllTests ./Test/tests.cpp ${LIB_SOURCE_FILES})
-if (APPLE)
-    target_link_libraries(runAllTests gtest gtest_main libSRUP_Lib.dylib ${OPENSSL_LIBRARIES})
-else()
-    target_link_libraries(runAllTests gtest gtest_main libSRUP_Lib.so ${OPENSSL_LIBRARIES})
-endif()
+#set(manual_openssl_include_path "/usr/local/Cellar/openssl/1.0.2q/include/")
+#
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall")
+#add_subdirectory(Test/lib/googletest)
+#
+#if (APPLE)
+#    add_definitions(-DGTEST_USE_OWN_TR1_TUPLE)
+#    add_definitions(-D__GLIBCXX__)
+#endif (APPLE)
+#
+#include_directories(./Test/lib/googletest/include ./Test/lib/googletest ${manual_openssl_include_path})
+#
+#add_executable(runAllTests ./Test/tests.cpp ${LIB_SOURCE_FILES})
+#if (APPLE)
+#    target_link_libraries(runAllTests gtest gtest_main libSRUP_Lib.dylib ${OPENSSL_LIBRARIES})
+#else()
+#    target_link_libraries(runAllTests gtest gtest_main libSRUP_Lib.so ${OPENSSL_LIBRARIES})
+#endif()

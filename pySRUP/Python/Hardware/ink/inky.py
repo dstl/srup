@@ -21,7 +21,7 @@ scr.cls()
 
 # We'll hard-code the server for this simple device into the code…
 server_id = "b9d077e223834cf6"
-
+BASE_URL = "" # Must be a valid base URL...
 FILENAME = "sw2.py"
 flag = False
 
@@ -69,7 +69,7 @@ def on_join_succeed():
     scr.cls()
 
 
-client = pySRUP.Client("sw2.cfg", "https://iot-lab.uk", device_type="inky")
+client = pySRUP.Client("sw2.cfg", BASE_URL, device_type="inky")
 client.on_action(on_action)
 client.on_id_request(on_id_req)
 client.on_join_refused(on_join_refused)

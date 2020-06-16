@@ -25,7 +25,7 @@ LOG_FILE = "web_c2.log"
 
 nav = Nav()
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'A730026C-307B-4C51-BDE1-11EBD16E5CF8'
+app.config['SECRET_KEY'] = '' # flask debug key...
 bootstrap = Bootstrap(app)
 nav.init_app(app)
 moment = Moment(app)
@@ -40,6 +40,8 @@ device_type = {}
 DEVICE_START = 0x00
 DEVICE_STOP = 0xFF
 
+# We might need to update these to a dictionaries at some point, to handle multiple simultaneous (human/machine)
+# moderated joins...
 joinPending = False
 pending_device = ""
 validation_value = ""
@@ -77,7 +79,7 @@ def on_join(joining_device):
     dev_type = C2_Server.device_types[joining_device]
 
     # ... now we have it; we'll use simple decision logic to accept only devices of types "simple" and "TEST"
-    if dev_type == 'simple' or dev_type == 'TEST':
+    if dev_type == 'simple' or dev_type == 'TEST' or dev_type == 'OBSERVER_DEMO':
         device_type[joining_device] = dev_type
         if joining_device not in devices:
             devices.append(joining_device)
@@ -85,7 +87,7 @@ def on_join(joining_device):
             device_data[joining_device] = []
         C2_Server.accept_join(joining_device, ID_req=True)
 
-    elif dev_type == 'LCD' or dev_type == 'inky' or dev_type == 'HEX':
+    elif dev_type == 'LCD' or dev_type == 'inky' or dev_type == 'HEX' or dev_type == 'OBS':
         # Send a response message - with a JOIN_REFUSED value...
         C2_Server.refuse_join(joining_device)
         # And do some other stuff to follow...??
@@ -113,6 +115,65 @@ def on_human_join(joining_device):
         logging.warning("Automatically rejected request from unknown or unsuitable device type ({})"
                         .format(device_type[joining_device]))
         C2_Server.fail_join(joining_device)
+
+
+def on_observed_join(joining_device, observer):
+    global C2_Server
+    global devices
+    global joinPending
+    global validation_value
+    global pending_device
+
+    # The workflow here is to first check the type of the device requesting to join...
+    dev_type = C2_Server.device_types[joining_device]
+
+    # ... now we have it; we'll use simple decision logic to only accept requests from *OBS* type devices
+    if dev_type == 'OBS':
+        # We'll use the joinPending flag to signal that a join that won't be automatically handled
+        # has been requested.
+        joinPending = True
+        pending_device = joining_device
+
+        validation_value = C2_Server.send_observed_join_response(joining_device)
+        C2_Server.send_observation_request(observer, joining_device, validation_value)
+    else:
+        # If it's not a device type we're expecting – we'll reject it…
+        logging.warning("Automatically rejected request from unknown or unsuitable device type ({})"
+                        .format(device_type[joining_device]))
+        C2_Server.fail_join(joining_device)
+
+
+def on_observed_join_succeed():
+    global joinPending
+    global pending_device
+    global devices
+
+    device = pending_device
+    dev_type = C2_Server.device_types[device]
+
+    if device not in devices:
+        device_type[device] = dev_type
+        devices.append(device)
+        if device not in device_data:
+            device_data[device] = []
+    joinPending = False
+    C2_Server.accept_join(device, True)
+
+
+def on_observed_join_invalid():
+    # The observation was invalid; so remove the device, and signal back.
+    global joinPending
+    global pending_device
+
+    device = pending_device
+    joinPending = False
+    C2_Server.fail_join(device)
+
+
+def on_observed_join_fail():
+    # The observation failed; so retry.
+    global pending_device
+    C2_Server.refuse_join(pending_device)
 
 
 def on_data(msg_data):
@@ -298,4 +359,8 @@ if __name__ == '__main__':
         C2_Server.on_data(on_data)
         C2_Server.on_join_request(on_join)
         C2_Server.on_human_join_request(on_human_join)
+        C2_Server.on_observed_join_request(on_observed_join)
+        C2_Server.on_observed_join_succeed(on_observed_join_succeed)
+        C2_Server.on_observed_join_invalid(on_observed_join_invalid)
+        C2_Server.on_observed_join_fail(on_observed_join_fail)
         app.run(host="0.0.0.0")

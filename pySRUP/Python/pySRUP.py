@@ -34,8 +34,11 @@ SRUP_HUMAN_JOIN_RESPONSE_MESSAGE_TYPE = pySRUPLib.__human_join_response_message_
 SRUP_RESIGN_REQUEST_MESSAGE_TYPE = pySRUPLib.__resign_request_message_type()
 SRUP_DEREGISTER_REQUEST_MESSAGE_TYPE = pySRUPLib.__deregister_request_message_type()
 SRUP_DERESISTER_COMMNAND_MESSAGE_TYPE = pySRUPLib.__deregister_command_message_type()
+SRUP_OBSERVED_JOIN_REQUEST_MESSAGE_TYPE = pySRUPLib.__observed_join_request_message_type()
+SRUP_OBSERVED_JOIN_RESPONSE_MESSAGE_TYPE = pySRUPLib.__observed_join_response_message_type()
+SRUP_OBSERVATION_REQUEST_MESSAGE_TYPE = pySRUPLib.__observation_request_message_type()
 
-# As of the current version of the pySRUP code (Feb 2019) we'll exclusively use the key-string
+# As of the current version of the pySRUP code (changed - Feb 2019) we'll exclusively use the key-string
 # rather than key file for non-local keys...
 # The underpinning C++ library will continue to support both – as will the direct pySRUPLib port to Python.
 # (Not least so that we can use key files for the local keys...)
@@ -102,6 +105,13 @@ class SRUP:
         self.__on_degregister_command = None
         self.__on_human_join_request = None
         self.__on_human_join_response = None
+        self.__on_observed_join_request = None
+        self.__on_observed_join_response = None
+        self.__on_observation_request = None
+        self.__on_observed_join_succeed = None
+        self.__on_observed_join_invalid = None
+        self.__on_observed_join_fail = None
+
         self.__config_filename = config_filename
         self.__mqtt_client = mqtt.Client(client_id="SRUP Client: {}".format(device_id))
         self.__mqtt_client.on_connect = self.__on_connect
@@ -110,6 +120,9 @@ class SRUP:
         self.__pySRUP_Version = lambda: "{}.{}".format(self.__pySRUP_Version_major, self.__pySRUP_Version_minor)
         self.__pySRUP_Version_major = lambda: 1
         self.__pySRUP_Version_minor = lambda: 1
+
+        self.__observer_token = None
+
         # Lastly create an empty list of "joined" devices...
         # This will always remain blank for devices...
         self.__controlled_devices = []
@@ -272,17 +285,24 @@ class SRUP:
                             self.__handle_human_join_request_message(msg)
                         elif msg_type == SRUP_HUMAN_JOIN_RESPONSE_MESSAGE_TYPE:
                             self.__handle_human_join_response_message(msg)
+                        elif msg_type == SRUP_OBSERVATION_REQUEST_MESSAGE_TYPE:
+                            self.__handle_observation_request_message(msg)
+                        elif msg_type == SRUP_OBSERVED_JOIN_REQUEST_MESSAGE_TYPE:
+                            self.__handle_observed_join_request_message(msg)
+                        elif msg_type == SRUP_OBSERVED_JOIN_RESPONSE_MESSAGE_TYPE:
+                            self.__handle_observed_join_response_message(msg)
                         else:
                             # We have received a message type that we can't handle...
                             # TODO: THROW A CUSTOM EXCEPTION
                             logging.warning("Invalid message type or format. (Message type = {}, SeqID = {})".
-                                            format(SRUP_generic_message.msg_type, SRUP_generic_message.sequence_id))
+                                            format(format(SRUP_generic_message.msg_type,'#04x'),
+                                                          SRUP_generic_message.sequence_id))
 
                     else:
                         # We have an invalid sequence ID...
                         # TODO: THROW A CUSTOM EXCEPTION
                         logging.warning("Sequence ID 0x{:02X} is invalid".format(SRUP_generic_message.sequence_id))
-                        logging.debug("Message Type: {}".format(SRUP_generic_message.msg_type))
+                        logging.debug("Sender: {}".format(hex(SRUP_generic_message.sender_id)))
                 else:
                     # This is a message that we sent – so ignore it...
                     pass
@@ -526,6 +546,103 @@ class SRUP:
                         self.__on_human_join_response(id_value)
                     else:
                         logging.error("Handler for Human Join Response is not defined...")
+            else:
+                # TODO: THROW A CUSTOM EXCEPTION
+                logging.warning("Message did not verify using stored key.")
+
+    def __handle_observed_join_request_message(self, mqtt_message):
+        # Devices shouldn't receive join requests - so skip if not server...
+        if self.__isServer:
+            # Check the topic...to see if this is for us...
+            if not bool(re.search('\ASRUP/servers/' + re.escape(self.__device_id) + '/\w+\Z', mqtt_message.topic)):
+                # TODO: THROW A CUSTOM EXCEPTION?
+                # We shouldn't be subscribed to another server's "JOIN" topic – so something went a bit wrong...
+                logging.debug(mqtt_message.topic)
+                logging.info("Message not for this server {}".format(re.findall('\ASRUP/servers/(\w+)/\w+\Z',
+                                                                                mqtt_message.topic)))
+            else:
+                SRUP_observed_join_request = pySRUPLib.SRUP_Observed_Join_Request()
+                SRUP_observed_join_request.deserialize(mqtt_message.payload)
+
+                remote_key = self.__get_key(SRUP_observed_join_request.sender_id)
+                if remote_key is None:
+                    # We don't already have the keyC2_Server.accept_join(pending_device, ID_req=True) – so fetch it...
+                    # If we get one, proceed – if not then log the error
+                    if not self.__add_key_from_keyservice(SRUP_observed_join_request.sender_id):
+                        # We can't find the key at the keyserver...
+                        # TODO: THROW A CUSTOM EXCEPTION
+                        logging.error("Sender ({}) could not be found at KeyEx lookup service".
+                                      format(self.__convert_sender_format(SRUP_observed_join_request.sender_id)))
+                        return
+                    else:
+                        remote_key = self.__get_key(SRUP_observed_join_request.sender_id)
+
+                # Next we need to check to see if we have the device type - as we may need this later on...
+                if self.__get_type(SRUP_observed_join_request.sender_id) is None:
+                    self.__get_device_type(SRUP_observed_join_request.sender_id)
+
+                if not SRUP_observed_join_request.verify_keystring(remote_key):
+                    # TODO: THROW A CUSTOM EXCEPTION
+                    logging.warning("Message did not verify using stored key.")
+                else:
+                    joining_device = SRUP_observed_join_request.sender_id
+                    hex_joining_device = hex(joining_device).lstrip('0x')
+                    logging.info("OBSERVED JOIN Request received from {}".format(hex_joining_device))
+
+                    observer = SRUP_observed_join_request.observer_id
+                    hex_observer_device = hex(observer).lstrip('0x')
+                    logging.info("Device requests observer {}".format(hex_observer_device))
+
+                    # Add the device ID & token to pending joins...
+                    self.__pending_joins[hex_joining_device] = SRUP_observed_join_request.token
+
+                    # We'll now give the "user program" the chance to accept or reject the join request...
+                    # To do this, we will call the registered callback function if there is one.
+                    # We'll assume that if the user hasn't registered on – then a simple join request will always be
+                    # (automatically) accepted – and responded to.
+
+                    if self.__on_observed_join_request is not None:
+                        # We'll call the user's function (providing them the device ID of the device).
+                        # It'll then be up to the user-code to call the .join_accept(devID) method to accept the join.
+                        # They can do this using device type – which can be retrieved by using the .device_types method
+                        self.__on_observed_join_request(hex_joining_device, hex_observer_device)
+                    else:
+                        # Send srup_response_status_join_fail – since we have no handler for this kind of message.
+                        self.fail_join(hex_joining_device)
+                        logging.warning("Observed Moderated Join Message Rejected – __on_observed_join_request "
+                                        "is not defined.")
+
+    def __handle_observed_join_response_message(self, mqtt_message):
+        SRUP_observed_join_response = pySRUPLib.SRUP_Observed_Join_Response()
+        SRUP_observed_join_response.deserialize(mqtt_message.payload)
+        remote_key = self.__get_key(SRUP_observed_join_response.sender_id)
+        if remote_key is not None:
+            if SRUP_observed_join_response.verify_keystring(remote_key):
+                if "{:x}".format(SRUP_observed_join_response.sender_id) == self.__server_id or self.__isServer:
+                    if self.__on_observed_join_response is not None:
+                        id_value = SRUP_observed_join_response.decrypt(self.__local_private_key)
+                        self.__on_observed_join_response(id_value)
+                    else:
+                        logging.error("Handler for Observed Join Response is not defined...")
+            else:
+                # TODO: THROW A CUSTOM EXCEPTION
+                logging.warning("Message did not verify using stored key.")
+
+    def __handle_observation_request_message(self, mqtt_message):
+        SRUP_observation_request = pySRUPLib.SRUP_Observation_Request()
+        SRUP_observation_request.deserialize(mqtt_message.payload)
+        remote_key = self.__get_key(SRUP_observation_request.sender_id)
+        if remote_key is not None:
+            if SRUP_observation_request.verify_keystring(remote_key):
+                if "{:x}".format(SRUP_observation_request.sender_id) == self.__server_id or self.__isServer:
+                    if self.__on_observation_request is not None:
+                        id_value = SRUP_observation_request.decrypt(self.__local_private_key)
+                        joining_device = SRUP_observation_request.joining_device_id
+                        hex_joining_device = hex(joining_device).lstrip('0x')
+                        self.__observer_token = SRUP_observation_request.token
+                        self.__on_observation_request(hex_joining_device, id_value)
+                    else:
+                        logging.error("Handler for Observation Request is not defined...")
             else:
                 # TODO: THROW A CUSTOM EXCEPTION
                 logging.warning("Message did not verify using stored key.")
@@ -798,6 +915,15 @@ class SRUP:
     def on_human_join_response(self, f):
         self.__on_human_join_response = f
 
+    def on_observed_join_request(self, f):
+        self.__on_observed_join_request = f
+
+    def on_observed_join_response(self, f):
+        self.__on_observed_join_response = f
+
+    def on_observation_request(self, f):
+        self.__on_observation_request = f
+
     def on_join_refused(self, f):
         self.__on_join_refused = f
 
@@ -806,6 +932,15 @@ class SRUP:
 
     def on_join_succeed(self, f):
         self.__on_join_succeed = f
+
+    def on_observed_join_succeed(self, f):
+        self.__on_observed_join_succeed = f
+
+    def on_observed_join_invalid(self, f):
+        self.__on_observed_join_invalid = f
+
+    def on_observed_join_fail(self, f):
+        self.__on_observed_join_fail = f
 
     def on_resign_request(self, f):
         self.__on_resign_request = f
@@ -859,6 +994,17 @@ class SRUP:
             self.__on_join_failed()
         elif SRUP_response_message.status == SRUP_response_message.srup_response_status_join_success():
             self.__on_join_succeed()
+
+        # Observed JOIN responses...
+        elif SRUP_response_message.status == SRUP_response_message.srup_response_status_observed_join_valid():
+            logging.info("RESPONSE Message – Observation Success")
+            self.__on_observed_join_succeed()
+        elif SRUP_response_message.status == SRUP_response_message.srup_response_status_observed_join_invalid():
+            logging.info("RESPONSE Message – Observation Invalid")
+            self.__on_observed_join_invalid()
+        elif SRUP_response_message.status == SRUP_response_message.srup_response_status_observed_join_fail():
+            logging.info("RESPONSE Message – Observation Fail")
+            self.__on_observed_join_fail()
         else:
             pass
 
@@ -1185,6 +1331,119 @@ class SRUP:
             # TODO: THROW A CUSTOM EXCEPTION
             logging.warning("Only server can send Human Join Responses...")
 
+    def send_SRUP_observed_join(self, observer_id):
+        # As with the human join (above) we send to the "nominated" server...
+        if not self.__isServer:
+            SRUP_Observed_Join_Request = pySRUPLib.SRUP_Observed_Join_Request()
+            SRUP_Observed_Join_Request.token = self.__getToken()
+
+            iTarget = int(self.__server_id, 16)
+            if iTarget not in self.__seq_id:
+                self.__seq_id.update({iTarget: 0})
+            self.__seq_id.update({iTarget: self.__seq_id[iTarget]+1})
+            s = self.__seq_id[iTarget]
+
+            # We must also get the server's key – if we don't already have it...
+            if not iTarget in self.__keystore:
+                self.__add_key_from_keyservice(iTarget)
+
+            SRUP_Observed_Join_Request.sequence_id = s
+            SRUP_Observed_Join_Request.sender_id = int(self.__device_id, 16)
+            SRUP_Observed_Join_Request.observer_id = int(observer_id, 16)
+            SRUP_Observed_Join_Request.sign(self.__local_private_key)
+            serial_data = SRUP_Observed_Join_Request.serialize()
+
+            if serial_data is not None:
+                topic = "SRUP/servers/{}/{}".format(self.__server_id, self.__device_id)
+                self.__mqtt_client.publish(topic, serial_data)
+                logging.info("Sending OBSERVED JOIN Request : using Observer {}".format(observer_id))
+                time.sleep(1)
+            else:
+                # TODO: THROW A CUSTOM EXCEPTION
+                logging.warning("Message did not serialize")
+        else:
+            # We can't perform a join if we're a server...
+            # TODO: THROW A CUSTOM EXCEPTION
+            logging.warning("Servers can't send observed join requests...")
+
+    def send_observed_join_response(self, target_id):
+        # In keeping with how things work for the human observer; we'll generate the id_val
+        # (one-time key) here – and return it to the calling function... The calling function will then be
+        # responsible for passing that value to the send_observation_request() function…
+        # But first, check if we're a server; we can only send a the observed_join_resp if we *are* a server!
+        if self.__isServer:
+            SRUP_Observed_Join_Response = pySRUPLib.SRUP_Observed_Join_Response()
+
+            iTarget = int(target_id, 16)
+            if iTarget not in self.__seq_id:
+                self.__seq_id.update({iTarget: 0})
+            self.__seq_id.update({iTarget: self.__seq_id[iTarget]+1})
+            s = self.__seq_id[iTarget]
+
+            SRUP_Observed_Join_Response.sequence_id = s
+            SRUP_Observed_Join_Response.sender_id = int(self.__device_id, 16)
+            SRUP_Observed_Join_Response.token = self.__getToken()
+
+            # Generate a new UUID for the ID value
+            id_val = uuid.uuid4().hex
+            time.sleep(0.5)
+            SRUP_Observed_Join_Response.encrypt_keystring(id_val, self.__get_key(target_id))
+
+            SRUP_Observed_Join_Response.sign(self.__local_private_key)
+            serial_data = SRUP_Observed_Join_Response.serialize()
+
+            if serial_data is not None:
+                topic = "SRUP/{}".format(target_id)
+                self.__mqtt_client.publish(topic, serial_data)
+                logging.info("Sending OBSERVED JOIN RESPONSE to {}".format(target_id))
+                time.sleep(1)
+                self.__pending_joins[target_id] = SRUP_Observed_Join_Response.token
+                return id_val
+            else:
+                # TODO: THROW A CUSTOM EXCEPTION
+                logging.warning("Message did not serialize")
+        else:
+            # We can't request termination if we're not a server...
+            # TODO: THROW A CUSTOM EXCEPTION
+            logging.warning("Only server can send Observed Join Responses...")
+
+    def send_observation_request(self, target_id, joining_device, id_val):
+        # We can only send a the observation request if we're a server...
+        if self.__isServer:
+            SRUP_Observation_Request = pySRUPLib.SRUP_Observation_Request()
+
+            # The target ID here is the ID of the observer... since that's where we're sending the message...
+            iTarget = int(target_id, 16)
+            if iTarget not in self.__seq_id:
+                self.__seq_id.update({iTarget: 0})
+            self.__seq_id.update({iTarget: self.__seq_id[iTarget]+1})
+            s = self.__seq_id[iTarget]
+
+            SRUP_Observation_Request.sequence_id = s
+            SRUP_Observation_Request.sender_id = int(self.__device_id, 16)
+            SRUP_Observation_Request.token = self.__getToken()
+
+            SRUP_Observation_Request.joining_device_id = int(joining_device, 16)
+
+            SRUP_Observation_Request.encrypt_keystring(id_val, self.__get_key(target_id))
+
+            SRUP_Observation_Request.sign(self.__local_private_key)
+            serial_data = SRUP_Observation_Request.serialize()
+
+            if serial_data is not None:
+                topic = "SRUP/{}".format(target_id)
+                self.__mqtt_client.publish(topic, serial_data)
+                logging.info("Sending OBSERVATION REQUEST to {}".format(target_id))
+                time.sleep(1)
+                return id_val
+            else:
+                # TODO: THROW A CUSTOM EXCEPTION
+                logging.warning("Observation Request message did not serialize")
+        else:
+            # We can't request termination if we're not a server...
+            # TODO: THROW A CUSTOM EXCEPTION
+            logging.warning("Only server can send Observation Requests...")
+
     def send_SRUP_Terminate(self, target_id):
         # We can only send a terminate if we're a server...
         if self.__isServer:
@@ -1425,6 +1684,21 @@ class SRUP:
         else:
             # TODO: THROW A CUSTOM EXCEPTION
             logging.warning("Device ID {:x} not found in pending joins.".format(deviceID))
+
+    def observation_valid(self, deviceID):
+        SRUP_response_message = pySRUPLib.SRUP_Response()
+        status = SRUP_response_message.srup_response_status_observed_join_valid()
+        self.send_SRUP_Response(self.server_id, status, self.__observer_token)
+
+    def observation_invalid(self, deviceID):
+        SRUP_response_message = pySRUPLib.SRUP_Response()
+        status = SRUP_response_message.srup_response_status_observed_join_invalid()
+        self.send_SRUP_Response(self.server_id, status, self.__observer_token)
+
+    def observation_fail(self, deviceID):
+        SRUP_response_message = pySRUPLib.SRUP_Response()
+        status = SRUP_response_message.srup_response_status_observed_join_fail()
+        self.send_SRUP_Response(self.server_id, status, self.__observer_token)
 
 
 # Now that we have defined the base-class, we will derive two subclasses (one for clients - e.g. devices),

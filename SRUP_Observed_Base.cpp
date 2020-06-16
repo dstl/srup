@@ -285,7 +285,7 @@ bool SRUP_MSG_OBS_BASE::Serialize(bool preSign)
 
         m_serial_length = 0;
         delete (m_serialized);
-        m_serialized= nullptr;
+        m_serialized = nullptr;
     }
 
     m_is_serialized = true;
