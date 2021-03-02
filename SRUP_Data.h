@@ -20,23 +20,23 @@ class SRUP_MSG_DATA : public  SRUP_MSG
 
 public:
     SRUP_MSG_DATA();
-    ~SRUP_MSG_DATA();
+    ~SRUP_MSG_DATA() override;
 
-    bool data_ID(const uint8_t*, const uint16_t);
+    bool data_ID(const uint8_t*, uint16_t);
     const uint8_t* data_ID();
-    uint16_t data_ID_length();
+    uint16_t data_ID_length() const;
 
-    bool data(const uint8_t*, const uint16_t);
-    bool data(const uint8_t);
-    bool data(const int8_t);
-    bool data(const uint16_t);
-    bool data(const int16_t);
-    bool data(const uint32_t);
-    bool data(const int32_t);
-    bool data(const uint64_t);
-    bool data(const int64_t);
-    bool data(const double);
-    bool data(const float);
+    bool data(const uint8_t*, uint16_t);
+    bool data(uint8_t);
+    bool data(int8_t);
+    bool data(uint16_t);
+    bool data(int16_t);
+    bool data(uint32_t);
+    bool data(int32_t);
+    bool data(uint64_t);
+    bool data(int64_t);
+    bool data(double);
+    bool data(float);
 
     const uint8_t* data();
     uint8_t* data_uint8();
@@ -50,15 +50,15 @@ public:
     float* data_float();
     double* data_double();
 
-    uint16_t data_length();
+    uint16_t data_length() const;
 
-    unsigned char* Serialized();
-    bool DeSerialize(const uint8_t*);
-    uint32_t SerializedLength();
+    unsigned char* Serialized() override;
+    bool DeSerialize(const uint8_t*) override;
+    uint32_t SerializedLength() override;
 
 protected:
-    bool Serialize(bool optional = false);
-    bool DataCheck();
+    bool Serialize(bool) override;
+    bool DataCheck() override;
     uint8_t* m_data_ID;
     uint8_t* m_data;
     uint16_t m_data_len;

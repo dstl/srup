@@ -37,7 +37,7 @@ bool SRUP_MSG_OBS_BASE::encrypt_data(uint8_t *data, uint16_t length, bool key_st
 
 unsigned char *SRUP_MSG_OBS_BASE::Serialized()
 {
-    if (Serialize())
+    if (Serialize(false))
         return m_serialized;
     else
         return nullptr;
@@ -60,9 +60,9 @@ bool SRUP_MSG_OBS_BASE::DeSerialize(const uint8_t *serial_data)
 
     // Now we have to unmarshall the sequence ID...
     uint8_t sid_bytes[8];
-    for (int i=0;i<8;i++)
+    for (unsigned char & sid_byte : sid_bytes)
     {
-        std::memcpy(&sid_bytes[i], (uint8_t*) serial_data + p, 1);
+        std::memcpy(&sid_byte, (uint8_t*) serial_data + p, 1);
         ++p;
     }
 
@@ -74,9 +74,9 @@ bool SRUP_MSG_OBS_BASE::DeSerialize(const uint8_t *serial_data)
 
     // Next we have to unmarshall the sender ID...
     uint8_t snd_bytes[8];
-    for (int i=0;i<8;i++)
+    for (unsigned char & snd_byte : snd_bytes)
     {
-        std::memcpy(&snd_bytes[i], (uint8_t*) serial_data + p, 1);
+        std::memcpy(&snd_byte, (uint8_t*) serial_data + p, 1);
         ++p;
     }
 
@@ -90,8 +90,7 @@ bool SRUP_MSG_OBS_BASE::DeSerialize(const uint8_t *serial_data)
     std::memcpy(bytes, serial_data + p, 2);
     x = decodeLength(bytes);
     p+=2;
-    if(m_token != nullptr)
-        delete(m_token);
+    delete[] m_token;
     m_token = new uint8_t[x+1];
     std::memcpy(m_token, (uint8_t *) serial_data + p, x);
     m_token_len = x;
@@ -105,8 +104,7 @@ bool SRUP_MSG_OBS_BASE::DeSerialize(const uint8_t *serial_data)
     m_sig_len = x;
 
     // The next x bytes are the value of the signature.
-    if(m_signature != nullptr)
-        delete(m_signature);
+    delete[] m_signature;
     m_signature = new uint8_t[x];
     std::memcpy(m_signature, serial_data + p, x);
 
@@ -130,7 +128,7 @@ bool SRUP_MSG_OBS_BASE::DeSerialize(const uint8_t *serial_data)
 uint32_t SRUP_MSG_OBS_BASE::SerializedLength()
 {
     if (!m_is_serialized)
-        Serialize();
+        Serialize(false);
 
     return m_serial_length;
 }
@@ -183,8 +181,7 @@ bool SRUP_MSG_OBS_BASE::Serialize(bool preSign)
 
     m_serial_length = serial_len + header_size + (field_length_size * var_length_field_count);
 
-    if (m_serialized != nullptr)
-        delete (m_serialized);
+    delete[] m_serialized;
 
     m_serialized = new uint8_t[m_serial_length];
     std::memset(m_serialized, 0, m_serial_length);
@@ -267,7 +264,7 @@ bool SRUP_MSG_OBS_BASE::Serialize(bool preSign)
 
     uint8_t* encrypted_data=m_crypto->crypt();
     std::memcpy(m_serialized + p, encrypted_data, crypt_len);
-    p+=crypt_len;
+    // p+=crypt_len; - Not used as this is the final operation
 
     delete[] msb;
     delete[] lsb;
@@ -276,15 +273,14 @@ bool SRUP_MSG_OBS_BASE::Serialize(bool preSign)
     // and discard (and reset) m_serialized & m_serial_length...
     if (preSign)
     {
-        if (m_unsigned_message != nullptr)
-            delete(m_unsigned_message);
+        delete[] m_unsigned_message;
         m_unsigned_message = new unsigned char[m_serial_length];
 
         std::memcpy(m_unsigned_message, m_serialized, m_serial_length);
         m_unsigned_length = m_serial_length;
 
         m_serial_length = 0;
-        delete (m_serialized);
+        delete[] m_serialized;
         m_serialized = nullptr;
     }
 

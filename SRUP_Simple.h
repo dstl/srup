@@ -15,18 +15,18 @@ class SRUP_MSG_SIMPLE : public  SRUP_MSG
     using SRUP_MSG::SRUP_MSG;
 
 public:
-    ~SRUP_MSG_SIMPLE();
+    ~SRUP_MSG_SIMPLE() override = default;
 
-    unsigned char* Serialized();
-    bool DeSerialize(const uint8_t *);
-    uint32_t SerializedLength();
+    unsigned char* Serialized() override;
+    bool DeSerialize(const uint8_t *) override;
+    uint32_t SerializedLength() override;
 
 protected:
     // We'd ideally like the constructor to be virtual - but as we can't do that in C++ we'll make the constructor
     // a protected method – that way you the compiler will prevent instantiation ...
-    SRUP_MSG_SIMPLE();
-    bool Serialize(bool optional = false);
-    bool DataCheck();
+    SRUP_MSG_SIMPLE() = default;
+    bool Serialize(bool) override;
+    bool DataCheck() override;
 
 };
 

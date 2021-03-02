@@ -40,8 +40,9 @@ namespace SRUP
 {
     // Now we have added both the Sequence ID & Sender ID we have incremented the version to 0x03
     // Removal of the group messages, and of the explicit target ID in the update init message is a breaking change
-    // hence we now upgrade to a version number of 0x04...
-    static const uint8_t SRUP_VERSION = 0x04;
+    // implemented as version number of 0x04...
+    // Addition of syndication messages moves use to version 0x05
+    static const uint8_t SRUP_VERSION = 0x05;
 }
 
 
@@ -51,11 +52,10 @@ public:
     SRUP_MSG();
     virtual ~SRUP_MSG();
 
-    /*
+
     // C++11 only - but disable copy constructor & copy-assign constructor
-    SRUP_MSG(const SRUP_MSG& that) = delete;
-    void operator=(SRUP_MSG const &x) = delete;
-    */
+    //void operator =(SRUP_MSG const &x) = delete;
+    //SRUP_MSG(const SRUP_MSG&) = delete;
 
     virtual uint8_t * Serialized()=0;
     virtual bool DeSerialize(const uint8_t *)=0;
@@ -70,11 +70,11 @@ public:
     const uint64_t* senderID();
     bool senderID(const uint64_t*);
 
-    uint8_t getByteVal(uint64_t, int);
+    static uint8_t getByteVal(uint64_t, uint8_t);
 
     const uint8_t* signature();
     bool token(const uint8_t*, uint16_t);
-    uint16_t token_length();
+    uint16_t token_length() const;
     const uint8_t* token();
 
     virtual bool SignF(char*);
@@ -105,11 +105,11 @@ protected:
     uint32_t m_serial_length;
     uint32_t m_unsigned_length;
 
-    uint16_t decodeLength(const uint8_t *);
-    void encodeLength(uint8_t *, uint8_t *, uint16_t);
+    static uint16_t decodeLength(const uint8_t *);
+    static void encodeLength(uint8_t *, uint8_t *, uint16_t);
 
     virtual bool DataCheck()=0; // A virtual helper function for Sign()...
-    virtual bool Serialize(bool optional = false)=0; // A virtual helper function for Serialized()...
+    virtual bool Serialize(bool)=0; // A virtual helper function for Serialized()...
 };
 
 #endif //C2_TEST_SRUP_H

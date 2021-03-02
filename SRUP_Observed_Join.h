@@ -22,9 +22,9 @@ class SRUP_MSG_OBSERVED_JOIN_REQ : public SRUP_MSG_SIMPLE
 
 public:
     SRUP_MSG_OBSERVED_JOIN_REQ();
-    ~SRUP_MSG_OBSERVED_JOIN_REQ();
+    ~SRUP_MSG_OBSERVED_JOIN_REQ() override;
 
-    bool DeSerialize(const uint8_t *);
+    bool DeSerialize(const uint8_t *) override;
 
     const uint64_t* observer_ID();
     bool observer_ID(const uint64_t*);
@@ -32,8 +32,8 @@ public:
 protected:
     uint64_t* m_observer_id;
 
-    bool Serialize(bool optional = false);
-    bool DataCheck();
+    bool Serialize(bool) override;
+    bool DataCheck() override;
 };
 
 #endif //SRUP_LIB_SRUP_OBSERVED_JOIN_H

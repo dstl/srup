@@ -33,11 +33,11 @@ public:
     uint8_t* crypt();
     void crypt(uint8_t *, uint16_t);
 
-    uint16_t cryptLen();
+    uint16_t cryptLen() const;
 
     uint8_t* signature();
     void signature(uint8_t*, uint16_t);
-    uint16_t sigLen();
+    uint16_t sigLen() const;
 
 private:
     unsigned char* m_signature;
@@ -49,16 +49,16 @@ private:
     uint8_t* m_plain_text;
     uint16_t m_plain_text_length;
 
-    RSA* getPubKeyF(char*);
-    RSA* getPubKey(char*);
-    RSA* getPrivateKeyF(char*);
-    RSA* getPrivateKey(char*);
+    static RSA* getPubKeyF(char*);
+    static RSA* getPubKey(char*);
+    static RSA* getPrivateKeyF(char*);
+    static RSA* getPrivateKey(char*);
 
-    unsigned char* _Sign(unsigned char *, size_t, RSA*);
-    bool _Verify(unsigned char *, size_t, RSA*);
+    unsigned char* _sign(unsigned char *data, size_t datasize, RSA *key);
+    bool _verify(unsigned char *data, size_t datasize, RSA *key);
 
-    bool _Encrypt(uint8_t *, int, RSA*);
-    uint8_t* _Decrypt(RSA*);
+    bool _encrypt(uint8_t *data, int input_datasize, RSA *rsa_key);
+    uint8_t* _decrypt(RSA *rsa_key);
 };
 
 

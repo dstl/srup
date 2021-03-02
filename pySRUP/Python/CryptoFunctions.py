@@ -14,6 +14,7 @@ from cryptography.exceptions import InvalidKey
 from cryptography import x509
 from cryptography.x509.oid import NameOID
 import base64
+import logging
 
 public_key_header = '-----BEGIN PUBLIC KEY-----'
 public_key_footer = '-----END PUBLIC KEY-----'
@@ -21,11 +22,12 @@ public_key_footer = '-----END PUBLIC KEY-----'
 
 # First off we have a simple function which will generate an RSA PEM key-pair for us
 def generate_keys(pv_file, pb_file):
-
+    logging.info("generate_keys")
     try:
         private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048, backend=default_backend())
+        logging.info("Private Key Generated")
         public_key = private_key.public_key()
-
+        logging.info("Public Key Extracted")
         # Write the keys to files...
         with open(pv_file, 'wb') as f:
             f.write(private_key.private_bytes(encoding=serialization.Encoding.PEM,
@@ -37,10 +39,12 @@ def generate_keys(pv_file, pb_file):
                                             format=serialization.PublicFormat.SubjectPublicKeyInfo))
         return True
 
-    except IOError:
+    except IOError as e:
+        logging.error("IO Error - {}".format(e))
         return False
 
-    except ValueError:
+    except ValueError as e:
+        logging.error("Value Error - {}".format(e))
         return False
 
 

@@ -18,22 +18,22 @@ namespace SRUP
 
 class SRUP_MSG_ACTION : public  SRUP_MSG
 {
-    using SRUP_MSG::SRUP_MSG;
+    //using SRUP_MSG::SRUP_MSG;
 
 public:
     SRUP_MSG_ACTION();
-    ~SRUP_MSG_ACTION();
+    ~SRUP_MSG_ACTION() override;
 
     bool action_ID(const uint8_t*);
     const uint8_t* action_ID();
 
-    uint8_t* Serialized();
-    bool DeSerialize(const uint8_t*);
-    uint32_t SerializedLength();
+    uint8_t* Serialized() override;
+    bool DeSerialize(const uint8_t*) override;
+    uint32_t SerializedLength() override;
 
 protected:
-    bool Serialize(bool optional = false);
-    bool DataCheck();
+    bool Serialize(bool) override;
+    bool DataCheck() override;
     uint8_t* m_action;
 };
 

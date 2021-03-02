@@ -17,15 +17,12 @@
 #include "SRUP_Deregister.h"
 #include "SRUP_Observed_Join_Resp.h"
 #include "SRUP_Human_Join_Resp.h"
-#include "SRUP_Group_Delete.h"
 #include "SRUP_Observed_Join.h"
 #include "SRUP_Join.h"
 #include "SRUP_Terminate.h"
-#include "SRUP_Group_Add.h"
 #include "SRUP_Human_Join.h"
 #include "SRUP_Join_Cmd.h"
 #include "SRUP_Resign.h"
-#include "SRUP_Group_Destroy.h"
 
 namespace SRUP
 {
@@ -42,16 +39,16 @@ class SRUP_MSG_GENERIC : public  SRUP_MSG
 
 public:
     SRUP_MSG_GENERIC();
-    ~SRUP_MSG_GENERIC();
+    ~SRUP_MSG_GENERIC() override = default;
 
-    unsigned char* Serialized();
-    bool DeSerialize(const unsigned char*);
-    uint32_t SerializedLength();
+    unsigned char* Serialized() override;
+    bool DeSerialize(const unsigned char*) override;
+    uint32_t SerializedLength() override;
 
 protected:
-    bool Serialize(bool optional = false);
-    bool DataCheck();
-    bool ValidMessageType(uint8_t*);
+    bool Serialize(bool) override;
+    bool DataCheck() override;
+    static bool ValidMessageType(const uint8_t*);
 
 };
 

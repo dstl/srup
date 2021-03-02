@@ -20,19 +20,19 @@ class SRUP_MSG_OBSERVE_REQ : public SRUP_MSG_OBS_BASE
 
 public:
     SRUP_MSG_OBSERVE_REQ();
-    ~SRUP_MSG_OBSERVE_REQ();
+    ~SRUP_MSG_OBSERVE_REQ() override;
 
-    bool DeSerialize(const uint8_t *);
+    bool DeSerialize(const uint8_t *) override;
 
-    unsigned char* Serialized();
-    uint32_t SerializedLength();
+    unsigned char* Serialized() override;
+    uint32_t SerializedLength() override;
 
     const uint64_t* joining_device_ID();
     bool joining_device_ID(const uint64_t*);
 
 protected:
-    bool Serialize(bool optional = false);
-    bool DataCheck();
+    bool Serialize(bool) override;
+    bool DataCheck() override;
 
     uint64_t* m_joining_device_id;
 };

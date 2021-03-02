@@ -17,6 +17,7 @@ SRUP_MSG::SRUP_MSG()
     m_sig_len = 0;
     m_unsigned_length = 0;
     m_token_len = 0;
+    m_serial_length = 0;
 
     m_is_serialized = false;
 
@@ -32,24 +33,12 @@ SRUP_MSG::~SRUP_MSG()
 {
     delete[] m_version;
     delete[] m_msgtype;
-
-    if (m_unsigned_message != nullptr)
-        delete(m_unsigned_message);
-
-    if (m_signature!= nullptr)
-        delete(m_signature);
-
-    if (m_token!= nullptr)
-        delete(m_token);
-
-    if (m_serialized != nullptr)
-        delete[] m_serialized;
-
-    if (m_sequence_ID != nullptr)
-        delete (m_sequence_ID);
-
-    if (m_sender_ID != nullptr)
-        delete (m_sender_ID);
+    delete[] m_unsigned_message;
+    delete[] m_signature;
+    delete[] m_token;
+    delete[] m_serialized;
+    delete (m_sequence_ID);
+    delete (m_sender_ID);
 }
 
 void SRUP_MSG::encodeLength(uint8_t * LSB, uint8_t * MSB, uint16_t l)
@@ -61,9 +50,9 @@ void SRUP_MSG::encodeLength(uint8_t * LSB, uint8_t * MSB, uint16_t l)
 
 uint16_t SRUP_MSG::decodeLength(const uint8_t * data)
 {
-    uint16_t x=0;
+    uint16_t x;
 
-    x = data[0] << 8;
+    x = data[0] << (uint8_t) 8;
     x += data[1];
 
     return x;
@@ -92,8 +81,7 @@ bool SRUP_MSG::token(const uint8_t* t, uint16_t len)
             return false;
         else
         {
-            if (m_token != nullptr)
-                delete (m_token);
+            delete[] m_token;
 
             m_token = new uint8_t[len];
             std::memcpy(m_token, t, len);
@@ -137,8 +125,8 @@ bool SRUP_MSG::SignF(char *keyfile)
     p_signature = Crypto.signature();
     m_sig_len = (uint16_t) Crypto.sigLen();
 
-    if (m_signature != nullptr)
-        delete(m_signature);
+    delete[] m_signature;
+    
     m_signature = new uint8_t[m_sig_len];
 
     memcpy(m_signature, p_signature, m_sig_len);
@@ -179,8 +167,7 @@ bool SRUP_MSG::Sign(char *key)
     p_signature = Crypto.signature();
     m_sig_len = (uint16_t) Crypto.sigLen();
 
-    if (m_signature != nullptr)
-        delete(m_signature);
+    delete[] m_signature;
     m_signature = new uint8_t[m_sig_len];
 
     memcpy(m_signature, p_signature, m_sig_len);
@@ -225,14 +212,14 @@ bool SRUP_MSG::sequenceID(const uint64_t *sid)
     return true;
 }
 
-uint8_t SRUP_MSG::getByteVal(uint64_t ull, int p)
+uint8_t SRUP_MSG::getByteVal(uint64_t ull, uint8_t p)
 {
     // Given that we have a 64-bit value – we only have 8 bits to play with...
     if ((p<0) || (p>7))
         return 0;
 
     uint8_t byte_val;
-    byte_val = ull >> 8*p;
+    byte_val = ull >> (uint8_t) (8 * p);
     return byte_val;
 }
 
@@ -259,7 +246,7 @@ bool SRUP_MSG::senderID(const uint64_t *sender)
     return true;
 }
 
-uint16_t SRUP_MSG::token_length()
+uint16_t SRUP_MSG::token_length() const
 {
     return m_token_len;
 }
