@@ -20,18 +20,18 @@ class SRUP_MSG_INIT : public  SRUP_MSG
 
 public:
     SRUP_MSG_INIT();
-    ~SRUP_MSG_INIT();
+    ~SRUP_MSG_INIT() override;
 
-    uint8_t* Serialized();
-    bool DeSerialize(const uint8_t*);
-    uint32_t SerializedLength();
+    uint8_t* Serialized() override;
+    bool DeSerialize(const uint8_t*) override;
+    uint32_t SerializedLength() override;
 
     bool url(const char*, uint16_t);
     char* url();
-    uint16_t url_length();
+    uint16_t url_length() const;
     bool digest(const char*, uint16_t);
     char* digest();
-    uint16_t digest_length();
+    uint16_t digest_length() const;
 
 protected:
     char* m_url;
@@ -40,8 +40,8 @@ protected:
     uint16_t m_url_len;
     uint16_t m_digest_len;
 
-    bool Serialize(bool optional = false);
-    bool DataCheck();
+    bool Serialize(bool) override;
+    bool DataCheck() override;
 };
 
 #endif //SRUP_LIB_SRUP_INIT_H

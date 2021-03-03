@@ -19,21 +19,22 @@ class SRUP_MSG_OBS_BASE : public  SRUP_MSG
     using SRUP_MSG::SRUP_MSG;
 
 public:
-    ~SRUP_MSG_OBS_BASE();
+    //SRUP_MSG_OBS_BASE(const SRUP_MSG_OBS_BASE&) = delete;
+    ~SRUP_MSG_OBS_BASE() override;
 
     const uint8_t* encrypted_data(bool, char*);
     bool encrypt_data(uint8_t*, uint16_t, bool, char*);
 
-    unsigned char* Serialized();
-    bool DeSerialize(const uint8_t *);
-    uint32_t SerializedLength();
+    unsigned char* Serialized() override;
+    bool DeSerialize(const uint8_t *) override;
+    uint32_t SerializedLength() override;
 
 protected:
     // We'd ideally like the constructor to be virtual - but as we can't do that in C++ we'll make the constructor
     // a protected method – that way you the compiler will prevent instantiation ...
     SRUP_MSG_OBS_BASE();
-    bool Serialize(bool optional = false);
-    bool DataCheck();
+    bool Serialize(bool) override;
+    bool DataCheck() override;
 
     SRUP_Crypto* m_crypto;
 

@@ -93,6 +93,58 @@ uint8_t get_srup_library_observation_request_message_type()
     return SRUP::SRUP_MESSAGE_TYPE_OBSERVE_REQ;
 }
 
+uint8_t get_srup_library_syndicated_end_request_message_type()
+{
+    return SRUP::SRUP_MESSAGE_TYPE_SYNDICATION_END;
+}
+
+uint8_t get_srup_library_syndicated_terminate_message_type ()
+{
+    return SRUP::SRUP_MESSAGE_TYPE_SYNDICATION_TERMINATE;
+}
+
+
+uint8_t get_srup_library_syndicated_action_message_type ()
+{
+    return SRUP::SRUP_MESSAGE_TYPE_SYNDICATED_ACTION;
+}
+
+uint8_t get_srup_library_syndicated_data_message_type ()
+{
+    return SRUP::SRUP_MESSAGE_TYPE_SYNDICATED_DATA;
+}
+
+uint8_t get_srup_library_syndicated_ID_req_message_type()
+{
+    return SRUP::SRUP_MESSAGE_TYPE_SYNDICATED_ID_REQUEST;
+}
+
+
+uint8_t get_srup_library_syndicated_device_count_message_type ()
+{
+    return SRUP::SRUP_MESSAGE_TYPE_SYNDICATED_DEV_COUNT;
+}
+
+uint8_t get_srup_library_syndicated_device_list_message_type ()
+{
+    return SRUP::SRUP_MESSAGE_TYPE_SYNDICATED_DEV_LIST;
+}
+
+uint8_t get_srup_library_syndicated_c2_request_message_type()
+{
+    return SRUP::SRUP_MESSAGE_TYPE_SYNDICATED_C2_REQ;
+}
+
+uint8_t get_srup_library_syndication_request_message_type()
+{
+    return SRUP::SRUP_MESSAGE_TYPE_SYNDICATION_REQUEST;
+}
+
+uint8_t get_srup_library_syndication_init_message_type()
+{
+    return SRUP::SRUP_MESSAGE_TYPE_SYNDICATION_INIT;
+}
+
 
 // property to ensure that we return a None in those cases. We could return "" : but None is more correct...
 boost::python::object get_token(SRUP_MSG& self)

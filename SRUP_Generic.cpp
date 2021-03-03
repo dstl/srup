@@ -10,11 +10,6 @@ SRUP_MSG_GENERIC::SRUP_MSG_GENERIC()
     m_msgtype[0] = SRUP::SRUP_MESSAGE_TYPE_GENERIC;
 }
 
-SRUP_MSG_GENERIC::~SRUP_MSG_GENERIC()
-{
-
-}
-
 bool SRUP_MSG_GENERIC::Serialize(bool preSign)
 {
     uint8_t *msb;
@@ -29,8 +24,7 @@ bool SRUP_MSG_GENERIC::Serialize(bool preSign)
     // Serial length is the header + two-byte token length, plus the length of the token in bytes.
     m_serial_length = header_size + 2 + m_token_len;
 
-    if (m_serialized != nullptr)
-        delete (m_serialized);
+    delete[] m_serialized;
 
     // Now check that we have a sequence ID...
     // Technically we don't need one - but we might want use this to check a generic message for a valid sequence ID
@@ -93,8 +87,8 @@ bool SRUP_MSG_GENERIC::Serialize(bool preSign)
     p+=1;
     std::memcpy(m_serialized + p, m_token, m_token_len);
 
-    delete(msb);
-    delete(lsb);
+    delete[] msb;
+    delete[] lsb;
 
     return true;
 }
@@ -107,7 +101,7 @@ uint32_t SRUP_MSG_GENERIC::SerializedLength()
 
 unsigned char *SRUP_MSG_GENERIC::Serialized()
 {
-    if (Serialize())
+    if (Serialize(false))
         return m_serialized;
     else
         return nullptr;
@@ -141,9 +135,9 @@ bool SRUP_MSG_GENERIC::DeSerialize(const unsigned char* serial_data)
 
     // Now we have to unmarshall the sequence ID...
     uint8_t sid_bytes[8];
-    for (int x = 0; x < 8; x++)
+    for (unsigned char & sid_byte : sid_bytes)
     {
-        std::memcpy(&sid_bytes[x], (uint8_t *) serial_data + p, 1);
+        std::memcpy(&sid_byte, (uint8_t *) serial_data + p, 1);
         ++p;
     }
 
@@ -155,9 +149,9 @@ bool SRUP_MSG_GENERIC::DeSerialize(const unsigned char* serial_data)
 
     // We will also unmarshall the sender ID...
     uint8_t snd_bytes[8];
-    for (int x = 0; x < 8; x++)
+    for (unsigned char & snd_byte : snd_bytes)
     {
-        std::memcpy(&snd_bytes[x], (uint8_t *) serial_data + p, 1);
+        std::memcpy(&snd_byte, (uint8_t *) serial_data + p, 1);
         ++p;
     }
 
@@ -171,8 +165,7 @@ bool SRUP_MSG_GENERIC::DeSerialize(const unsigned char* serial_data)
     std::memcpy(bytes, serial_data + p, 2);
     x = decodeLength(bytes);
     p += 2;
-    if (m_token != nullptr)
-        delete (m_token);
+    delete[] m_token;
     m_token = new uint8_t[x];
     std::memcpy(m_token, (uint8_t *) serial_data + p, x);
     m_token_len = x;
@@ -186,7 +179,7 @@ bool SRUP_MSG_GENERIC::DataCheck()
     return false;
 }
 
-bool SRUP_MSG_GENERIC::ValidMessageType (uint8_t *msgtype)
+bool SRUP_MSG_GENERIC::ValidMessageType (const uint8_t *msgtype)
 {
     return ((*msgtype == SRUP::SRUP_MESSAGE_TYPE_INITIATE) or
         (*msgtype == SRUP::SRUP_MESSAGE_TYPE_GENERIC) or
@@ -199,15 +192,12 @@ bool SRUP_MSG_GENERIC::ValidMessageType (uint8_t *msgtype)
         (*msgtype != SRUP::SRUP_MESSAGE_TYPE_DEREGISTER_REQ) or
         (*msgtype != SRUP::SRUP_MESSAGE_TYPE_OBS_JOIN_RESP) or
         (*msgtype != SRUP::SRUP_MESSAGE_TYPE_HM_JOIN_RESP) or
-        (*msgtype != SRUP::SRUP_MESSAGE_TYPE_GROUP_DELETE) or
         (*msgtype != SRUP::SRUP_MESSAGE_TYPE_OBS_JOIN_REQ) or
         (*msgtype != SRUP::SRUP_MESSAGE_TYPE_JOIN_REQ) or
         (*msgtype != SRUP::SRUP_MESSAGE_TYPE_TERMINATE_CMD) or
-        (*msgtype != SRUP::SRUP_MESSAGE_TYPE_GROUP_ADD) or
         (*msgtype != SRUP::SRUP_MESSAGE_TYPE_HM_JOIN_REQ) or
         (*msgtype != SRUP::SRUP_MESSAGE_TYPE_JOIN_CMD) or
-        (*msgtype != SRUP::SRUP_MESSAGE_TYPE_RESIGN_REQUEST) or
-        (*msgtype != SRUP::SRUP_MESSAGE_TYPE_GROUP_DESTROY)
+        (*msgtype != SRUP::SRUP_MESSAGE_TYPE_RESIGN_REQUEST) 
     );
 }
 

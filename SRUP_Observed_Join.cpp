@@ -70,8 +70,7 @@ bool SRUP_MSG_OBSERVED_JOIN_REQ::Serialize(bool preSign)
 
     m_serial_length = serial_len + header_size + (field_length_size * var_length_field_count);
 
-    if (m_serialized != nullptr)
-        delete (m_serialized);
+    delete[] m_serialized;
 
     m_serialized = new uint8_t[m_serial_length];
     std::memset(m_serialized, 0, m_serial_length);
@@ -145,22 +144,21 @@ bool SRUP_MSG_OBSERVED_JOIN_REQ::Serialize(bool preSign)
         p+=1;
     }
 
-    delete(msb);
-    delete(lsb);
+    delete[] msb;
+    delete[] lsb;
 
     // If we're in preSign we don't have a real value for m_serialized - so copy the data to m_unsigned_message
     // and discard (and reset) m_serialized & m_serial_length...
     if (preSign)
     {
-        if (m_unsigned_message != nullptr)
-            delete(m_unsigned_message);
+        delete[] m_unsigned_message;
         m_unsigned_message = new unsigned char[m_serial_length];
 
         std::memcpy(m_unsigned_message, m_serialized, m_serial_length);
         m_unsigned_length = m_serial_length;
 
         m_serial_length = 0;
-        delete (m_serialized);
+        delete[] m_serialized;
         m_serialized= nullptr;
     }
 
@@ -185,9 +183,9 @@ bool SRUP_MSG_OBSERVED_JOIN_REQ::DeSerialize(const unsigned char* serial_data)
 
     // Now we have to unmarshall the sequence ID...
     uint8_t sid_bytes[8];
-    for (int i=0;i<8;i++)
+    for (unsigned char & sid_byte : sid_bytes)
     {
-        std::memcpy(&sid_bytes[i], (uint8_t*) serial_data + p, 1);
+        std::memcpy(&sid_byte, (uint8_t*) serial_data + p, 1);
         ++p;
     }
 
@@ -199,9 +197,9 @@ bool SRUP_MSG_OBSERVED_JOIN_REQ::DeSerialize(const unsigned char* serial_data)
 
     // ...and also for the sender_ID
     uint8_t snd_bytes[8];
-    for (int i=0;i<8;i++)
+    for (unsigned char & snd_byte : snd_bytes)
     {
-        std::memcpy(&snd_bytes[i], (uint8_t*) serial_data + p, 1);
+        std::memcpy(&snd_byte, (uint8_t*) serial_data + p, 1);
         ++p;
     }
 
@@ -214,8 +212,7 @@ bool SRUP_MSG_OBSERVED_JOIN_REQ::DeSerialize(const unsigned char* serial_data)
     std::memcpy(bytes, serial_data + p, 2);
     x = decodeLength(bytes);
     p+=2;
-    if(m_token != nullptr)
-        delete(m_token);
+    delete[] m_token;
     m_token = new uint8_t[x+1];
     std::memcpy(m_token, (char*) serial_data + p, x);
     m_token_len = x;
@@ -228,17 +225,16 @@ bool SRUP_MSG_OBSERVED_JOIN_REQ::DeSerialize(const unsigned char* serial_data)
     m_sig_len = x;
 
     // The next x bytes are the value of the signature.
-    if(m_signature != nullptr)
-        delete(m_signature);
+    delete[] m_signature;
     m_signature = new unsigned char[x];
     std::memcpy(m_signature, serial_data + p, x);
     p+=x;
 
     // Lastly we have to unmarshall the device ID...
     uint8_t obs_bytes[8];
-    for (int i=0;i<8;i++)
+    for (unsigned char & obs_byte : obs_bytes)
     {
-        std::memcpy(&obs_bytes[i], (uint8_t*) serial_data + p, 1);
+        std::memcpy(&obs_byte, (uint8_t*) serial_data + p, 1);
         ++p;
     }
 

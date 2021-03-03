@@ -167,6 +167,7 @@ def test_serializer():
     x.sender_id = 0x5F5F5F5F5F5F5F5F
     assert x.sign(keyfile) is True
     z = x.serialize()
+    assert z is not None
 
 
 def test_serialize_blank_token():

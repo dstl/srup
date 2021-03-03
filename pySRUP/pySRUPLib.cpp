@@ -6,12 +6,19 @@
 #include "SRUP_Data.h"
 #include "SRUP_Activate.h"
 #include "SRUP_Join.h"
-#include "SRUP_Group_Add.h"
-#include "SRUP_Group_Delete.h"
-#include "SRUP_Group_Destroy.h"
 #include "SRUP_Observed_Base.h"
 #include "SRUP_Observed_Join.h"
 #include "SRUP_Observation_Req.h"
+#include "SRUP_Syndicated_End_Request.h"
+#include "SRUP_Syndicated_Terminate.h"
+#include "SRUP_Syndicated_Data.h"
+#include "SRUP_Syndicated_Action.h"
+#include "SRUP_Syndicated_ID_REQ.h"
+#include "SRUP_Syndicated_Device_Count.h"
+#include "SRUP_Syndicated_Device_List.h"
+#include "SRUP_Syndicated_C2_Req.h"
+#include "SRUP_Syndication_Request.h"
+#include "SRUP_Syndication_Init.h"
 
 // Now the pySRUPLib files...
 #include "pySRUP_Action.h"
@@ -20,6 +27,13 @@
 #include "pySRUP_Data.h"
 #include "pySRUP_Join.h"
 #include "pySRUP_Observed.h"
+#include "pySRUP_Syndicated_Action.h"
+#include "pySRUP_Syndicated_Data.h"
+#include "pySRUP_Syndicated_ID_REQ.h"
+#include "pySRUP_Syndicated_Device_Count.h"
+#include "pySRUP_Syndicated_Device_List.h"
+#include "pySRUP_Syndicated_C2_Request.h"
+#include "pySRUP_Syndication_Init.h"
 
 BOOST_PYTHON_MODULE (pySRUPLib)
 {
@@ -47,6 +61,17 @@ BOOST_PYTHON_MODULE (pySRUPLib)
     boost::python::def("__observed_join_response_message_type", &get_srup_library_observed_join_response_message_type);
     boost::python::def("__observation_request_message_type", &get_srup_library_observation_request_message_type);
     boost::python::def("__observed_join_request_message_type", &get_srup_library_observed_join_request_message_type);
+
+    boost::python::def("__syndicated_end_request_message_type", &get_srup_library_syndicated_end_request_message_type);
+    boost::python::def("__syndicated_terminate_message_type", &get_srup_library_syndicated_terminate_message_type);
+    boost::python::def("__syndicated_action_message_type", &get_srup_library_syndicated_action_message_type);
+    boost::python::def("__syndicated_data_message_type", &get_srup_library_syndicated_data_message_type);
+    boost::python::def("__syndicated_id_request_message_type", &get_srup_library_syndicated_ID_req_message_type);
+    boost::python::def("__syndicated_device_count_message_type", &get_srup_library_syndicated_device_count_message_type);
+    boost::python::def("__syndicated_device_list_message_type", &get_srup_library_syndicated_device_list_message_type);
+    boost::python::def("__syndicated_c2_request_message_type", &get_srup_library_syndicated_c2_request_message_type);
+    boost::python::def("__syndication_request_message_type", &get_srup_library_syndication_request_message_type);
+    boost::python::def("__syndication_init_message_type", &get_srup_library_syndication_init_message_type);
 
     // Note that we will first create the base-class - which will set to non-copyable - and no_init
     // (meaning it is forced to be an abstract class...)
@@ -81,31 +106,31 @@ BOOST_PYTHON_MODULE (pySRUPLib)
             .add_property("action_id", &get_actionID, &set_actionID);
 
     // Generic is essentially an implementable version of the base-class...
-    boost::python::class_<SRUP_MSG_GENERIC, boost::python::bases<SRUP_MSG>>("SRUP_Generic");
+    boost::python::class_<SRUP_MSG_GENERIC, boost::python::bases<SRUP_MSG>> generic ("SRUP_Generic");
 
     // Activate doesn't have any additional properties over the base either...
-    boost::python::class_<SRUP_MSG_ACTIVATE, boost::python::bases<SRUP_MSG>>("SRUP_Activate");
+    boost::python::class_<SRUP_MSG_ACTIVATE, boost::python::bases<SRUP_MSG>> activate ("SRUP_Activate");
 
     // Join Request doesn't have any additional properties over the base...
-    boost::python::class_<SRUP_MSG_JOIN_REQ, boost::python::bases<SRUP_MSG>>("SRUP_Join_Request");
+    boost::python::class_<SRUP_MSG_JOIN_REQ, boost::python::bases<SRUP_MSG>> join_request ("SRUP_Join_Request");
 
     // Human Join Request doesn't have any additional properties over the base...
-    boost::python::class_<SRUP_MSG_HUMAN_JOIN_REQ, boost::python::bases<SRUP_MSG>>("SRUP_Human_Join_Request");
+    boost::python::class_<SRUP_MSG_HUMAN_JOIN_REQ, boost::python::bases<SRUP_MSG>> h_join_request ("SRUP_Human_Join_Request");
 
     // ID Request doesn't have any additional properties over the base...
-    boost::python::class_<SRUP_MSG_ID_REQ, boost::python::bases<SRUP_MSG>>("SRUP_ID_Request");
+    boost::python::class_<SRUP_MSG_ID_REQ, boost::python::bases<SRUP_MSG>> id_request ("SRUP_ID_Request");
 
     // Resign Request doesn't have any additional properties over the base...
-    boost::python::class_<SRUP_MSG_RESIGN_REQ, boost::python::bases<SRUP_MSG>>("SRUP_Resign_Request");
+    boost::python::class_<SRUP_MSG_RESIGN_REQ, boost::python::bases<SRUP_MSG>> resign_request ("SRUP_Resign_Request");
 
     // Terminate Command doesn't have any additional properties over the base...
-    boost::python::class_<SRUP_MSG_TERMINATE_CMD, boost::python::bases<SRUP_MSG>>("SRUP_Terminate_Command");
+    boost::python::class_<SRUP_MSG_TERMINATE_CMD, boost::python::bases<SRUP_MSG>> terminate_cmd ("SRUP_Terminate_Command");
 
     // Deregister Request doesn't have any additional properties over the base...
-    boost::python::class_<SRUP_MSG_DEREGISTER_REQ, boost::python::bases<SRUP_MSG>>("SRUP_Deregister_Request");
+    boost::python::class_<SRUP_MSG_DEREGISTER_REQ, boost::python::bases<SRUP_MSG>> deregister_req ("SRUP_Deregister_Request");
 
     // Deregister Command doesn't have any additional properties over the base...
-    boost::python::class_<SRUP_MSG_DEREGISTER_CMD, boost::python::bases<SRUP_MSG>>("SRUP_Deregister_Command");
+    boost::python::class_<SRUP_MSG_DEREGISTER_CMD, boost::python::bases<SRUP_MSG>> deregister_cmd ("SRUP_Deregister_Command");
 
     // Response has only one property to add – status...
     // But we'll also add all of the possible status values as read-only (getter only) properties...
@@ -164,13 +189,65 @@ BOOST_PYTHON_MODULE (pySRUPLib)
             .add_property("double_data", &get_double_data, &set_double_data);
 
     // Next we have Human Join Response ... which adds nothing to the observed base message class...
-    boost::python::class_<SRUP_MSG_HUMAN_JOIN_RESP, boost::python::bases<SRUP_MSG_OBS_BASE>>("SRUP_Human_Join_Response");
+    boost::python::class_<SRUP_MSG_HUMAN_JOIN_RESP, boost::python::bases<SRUP_MSG_OBS_BASE>> h_join_resp ("SRUP_Human_Join_Response");
 
     // ... and Observation Request (the observed base class + the joining device ID)
     boost::python::class_<SRUP_MSG_OBSERVE_REQ, boost::python::bases<SRUP_MSG_OBS_BASE>>("SRUP_Observation_Request")
         .add_property("joining_device_id", &get_joining_device_id, &set_joining_device_id);
 
     // ... and lastly the Observed Join Response – which adds nothing to the observed base message...
-    boost::python::class_<SRUP_MSG_OBS_JOIN_RESP, boost::python::bases<SRUP_MSG_OBS_BASE>>("SRUP_Observed_Join_Response");
+    boost::python::class_<SRUP_MSG_OBS_JOIN_RESP, boost::python::bases<SRUP_MSG_OBS_BASE>> observed_join_resp ("SRUP_Observed_Join_Response");
 
+    // Now we'll list the syndicated / syndication classes.
+    // Starting with the easy two...
+    // End and Terminate don't have any additional properties over the base...
+    boost::python::class_<SRUP_MSG_SYNDICATED_TERMINATE, boost::python::bases<SRUP_MSG>> syndicated_terminate ("SRUP_Syndicated_Terminate");
+    boost::python::class_<SRUP_MSG_SYNDICATED_END_REQ, boost::python::bases<SRUP_MSG>> syndicated_end ("SRUP_Syndicated_End_Request");
+
+    // Next we'll do action, data, and ID.
+    // The Syndicated ID request is the base-class plus one additional property (the target ID)...
+    boost::python::class_<SRUP_MSG_SYNDICATED_ID_REQ, boost::python::bases<SRUP_MSG>>("SRUP_Syndicated_ID_Request")
+            .add_property("target_id", &get_target_id_id_req, &set_target_id_id_req);
+    // The Syndicated Action is the "regular" Action class plus the target ID...
+    boost::python::class_<SRUP_MSG_SYNDICATED_ACTION, boost::python::bases<SRUP_MSG_ACTION>>("SRUP_Syndicated_Action")
+            .add_property("target_id", &get_target_id_action, &set_target_id_action);
+    // And the Syndicated Data is the previous data class - plus a source ID.
+    boost::python::class_<SRUP_MSG_SYNDICATED_DATA, boost::python::bases<SRUP_MSG_DATA>>("SRUP_Syndicated_Data")
+            .add_property("source_id", &get_source_id_data, &set_source_id_data);
+
+    // Next we'll add the device count & list message classes…
+    // Device_Count adds only the count property (uint32_t)
+    boost::python::class_<SRUP_MSG_SYNDICATED_DEV_COUNT, boost::python::bases<SRUP_MSG>>("SRUP_Syndicated_Device_Count")
+            .add_property("count", &get_count_dev_count, &set_count_dev_count);
+    // Device_List adds two properties – device_sequence and device_ID…
+    boost::python::class_<SRUP_MSG_SYNDICATED_DEV_LIST, boost::python::bases<SRUP_MSG>>("SRUP_Syndicated_Device_List")
+            .add_property("device_sequence", &get_sequence_dev_list, &set_sequence_dev_list)
+            .add_property("device_id", &get_device_id_dev_list, &set_device_id_dev_list);
+    // C2_Request is more or less the same as the data message – but it uses a request_id instead of a data id...
+    // Retrospectively – we could have made design changes earlier in the process to better reuse the existing
+    // data message class here... But we didn't. :-( And we can't even directly re-use the property implementations.
+    // This would be quite a lot of work to refactor; but it should probably go onto the list for a future release?
+    boost::python::class_<SRUP_MSG_SYNDICATED_C2_REQ, boost::python::bases<SRUP_MSG>>("SRUP_Syndicated_C2_Request")
+            .add_property("req_id", &get_reqID_c2_req, &set_reqID_c2_req)
+            .add_property("bytes_data", &get_byte_c2_req, &set_byte_c2_req)
+            .add_property("uint8_data", &get_uint8_c2_req, &set_uint8_c2_req)
+            .add_property("int8_data", &get_int8_c2_req, &set_int8_c2_req)
+            .add_property("uint16_data", &get_uint16_c2_req, &set_uint16_c2_req)
+            .add_property("int16_data", &get_int16_c2_req, &set_int16_c2_req)
+            .add_property("uint32_data", &get_uint32_c2_req, &set_uint32_c2_req)
+            .add_property("int32_data", &get_int32_c2_req, &set_int32_c2_req)
+            .add_property("uint64_data", &get_uint64_c2_req, &set_uint64_c2_req)
+            .add_property("int64_data", &get_int64_c2_req, &set_int64_c2_req)
+            .add_property("float_data", &get_float_c2_req, &set_float_c2_req)
+            .add_property("double_data", &get_double_c2_req, &set_double_c2_req);
+
+
+    // Next up for the syndication messages we have the Syndication Request...
+    // For this we're using the observed base class – to provide the encrypted nonce value.
+    // Syndication Request doesn't add anything new to the observed base class...
+    boost::python::class_<SRUP_MSG_SYNDICATION_REQUEST, boost::python::bases<SRUP_MSG_OBS_BASE>> syndication_req ("SRUP_Syndication_Request");
+    // And finally, we add the Syndication Init message – which like the syndication request, uses the observed base
+    // but also adds a new property – the URL of the key service for the syndication.
+    boost::python::class_<SRUP_MSG_SYNDICATION_INIT, boost::python::bases<SRUP_MSG_OBS_BASE>> ("SRUP_Syndication_Init")
+            .add_property("url", &get_url_syndication_init, &set_url_syndication_init);
 }

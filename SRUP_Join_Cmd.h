@@ -23,16 +23,16 @@ class SRUP_MSG_JOIN_CMD : public SRUP_MSG_SIMPLE
 
 public:
     SRUP_MSG_JOIN_CMD();
-    ~SRUP_MSG_JOIN_CMD();
+    ~SRUP_MSG_JOIN_CMD() override;
 
-    bool DeSerialize(const uint8_t *);
+    bool DeSerialize(const uint8_t *) override;
 
     const uint64_t* device_ID();
     bool device_ID(const uint64_t*);
 
 protected:
-    bool Serialize(bool optional = false);
-    bool DataCheck();
+    bool Serialize(bool) override;
+    bool DataCheck() override;
 
     uint64_t* m_device_id;
 };

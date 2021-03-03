@@ -6,13 +6,12 @@
 #define SRUP_TESTS_PYSRUP_DATA_H
 
 #include <boost/python.hpp>
-
 #include "SRUP_Data.h"
 
-void set_dataID(SRUP_MSG_DATA&, std::string);
+void set_dataID(SRUP_MSG_DATA&, const std::string&);
 boost::python::object get_dataID(SRUP_MSG_DATA&);
 
-void set_byte_data(SRUP_MSG_DATA&, std::string);
+void set_byte_data(SRUP_MSG_DATA&, const std::string&);
 boost::python::object get_byte_data(SRUP_MSG_DATA&);
 
 void set_uint8_data(SRUP_MSG_DATA&, uint8_t);

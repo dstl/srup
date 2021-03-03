@@ -4,7 +4,7 @@
 
 #include "pySRUP_Data.h"
 
-void set_dataID(SRUP_MSG_DATA& self, std::string data_id)
+void set_dataID(SRUP_MSG_DATA& self, const std::string& data_id)
 {
     size_t length = data_id.length();
     if (length > UINT16_MAX)
@@ -25,7 +25,7 @@ boost::python::object get_dataID(SRUP_MSG_DATA &self)
 }
 
 
-void set_byte_data(SRUP_MSG_DATA& self, std::string data)
+void set_byte_data(SRUP_MSG_DATA& self, const std::string& data)
 {
     self.data((uint8_t*) data.c_str(), (uint16_t) data.length());
 }

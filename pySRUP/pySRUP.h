@@ -21,14 +21,21 @@
 #include "SRUP_Terminate.h"
 #include "SRUP_Deregister.h"
 #include "SRUP_Deregister_Cmd.h"
-#include "SRUP_Group_Add.h"
-#include "SRUP_Group_Delete.h"
-#include "SRUP_Group_Destroy.h"
 #include "SRUP_Human_Join_Resp.h"
 #include "SRUP_Human_Join.h"
 #include "SRUP_Observation_Req.h"
 #include "SRUP_Observed_Join_Resp.h"
 #include "SRUP_Observed_Join.h"
+#include "SRUP_Syndicated_End_Request.h"
+#include "SRUP_Syndicated_Terminate.h"
+#include "SRUP_Syndicated_Data.h"
+#include "SRUP_Syndicated_Action.h"
+#include "SRUP_Syndicated_ID_REQ.h"
+#include "SRUP_Syndicated_Device_Count.h"
+#include "SRUP_Syndicated_Device_List.h"
+#include "SRUP_Syndicated_C2_Req.h"
+#include "SRUP_Syndication_Request.h"
+#include "SRUP_Syndication_Init.h"
 
 
 uint8_t get_srup_library_version();
@@ -50,6 +57,16 @@ uint8_t get_srup_library_human_join_response_message_type();
 uint8_t get_srup_library_observed_join_response_message_type();
 uint8_t get_srup_library_observed_join_request_message_type();
 uint8_t get_srup_library_observation_request_message_type();
+uint8_t get_srup_library_syndicated_end_request_message_type();
+uint8_t get_srup_library_syndicated_terminate_message_type();
+uint8_t get_srup_library_syndicated_action_message_type();
+uint8_t get_srup_library_syndicated_data_message_type();
+uint8_t get_srup_library_syndicated_ID_req_message_type();
+uint8_t get_srup_library_syndicated_device_count_message_type();
+uint8_t get_srup_library_syndicated_device_list_message_type();
+uint8_t get_srup_library_syndicated_c2_request_message_type();
+uint8_t get_srup_library_syndication_request_message_type();
+uint8_t get_srup_library_syndication_init_message_type();
 
 uint8_t get_version(SRUP_MSG&);
 uint8_t get_msgtype(SRUP_MSG&);

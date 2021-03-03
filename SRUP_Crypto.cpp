@@ -19,12 +19,9 @@ SRUP_Crypto::SRUP_Crypto()
 
 SRUP_Crypto::~SRUP_Crypto()
 {
-    if (m_signature != nullptr)
-        delete(m_signature);
-    if (m_crypt != nullptr)
-        delete(m_crypt);
-    if (m_plain_text != nullptr)
-        delete[] m_plain_text;
+    delete[] m_signature;
+    delete[] m_crypt;
+    delete[] m_plain_text;
 }
 
 RSA* SRUP_Crypto::getPubKeyF(char *keyfile)
@@ -37,6 +34,7 @@ RSA* SRUP_Crypto::getPubKeyF(char *keyfile)
     {
         key = RSA_new();
         key = PEM_read_RSA_PUBKEY(fp, &key, nullptr, nullptr);
+        fclose(fp);
         return key;
     }
 }
@@ -68,6 +66,7 @@ RSA* SRUP_Crypto::getPrivateKeyF(char *keyfile)
     {
         key = RSA_new();
         key = PEM_read_RSAPrivateKey(fp, &key, nullptr, nullptr);
+        fclose(fp);
         return key;
     }
 }
@@ -88,7 +87,7 @@ RSA* SRUP_Crypto::getPrivateKey(char *key_string)
     return key;
 }
 
-unsigned char* SRUP_Crypto::_Sign(unsigned char *data, size_t datasize, RSA *key)
+unsigned char* SRUP_Crypto::_sign(unsigned char *data, size_t datasize, RSA *key)
 {
     if (key == nullptr)
         return nullptr;
@@ -106,7 +105,7 @@ unsigned char* SRUP_Crypto::_Sign(unsigned char *data, size_t datasize, RSA *key
     return m_signature;
 }
 
-bool SRUP_Crypto::_Verify(unsigned char *data, size_t datasize, RSA *key)
+bool SRUP_Crypto::_verify(unsigned char *data, size_t datasize, RSA *key)
 {
     if (key == nullptr)
         return false;
@@ -131,7 +130,7 @@ bool SRUP_Crypto::_Verify(unsigned char *data, size_t datasize, RSA *key)
     return rval;
 }
 
-bool SRUP_Crypto::_Encrypt(uint8_t *data, int input_datasize, RSA *rsa_key)
+bool SRUP_Crypto::_encrypt(uint8_t *data, int input_datasize, RSA *rsa_key)
 {
     int evp_key_len;
     int iv_len;
@@ -198,8 +197,7 @@ bool SRUP_Crypto::_Encrypt(uint8_t *data, int input_datasize, RSA *rsa_key)
     // input data size (sizeof(int)=4)) + data (body + final (including padding))
     m_crypt_length = sizeof(int) + evp_key_len + iv_len + sizeof(int) + sizeof(int) + body_len + final_len;
 
-    if (m_crypt!= nullptr)
-        delete(m_crypt);
+    delete[] m_crypt;
     m_crypt = new uint8_t[m_crypt_length];
 
     int x=0;
@@ -244,11 +242,11 @@ bool SRUP_Crypto::_Encrypt(uint8_t *data, int input_datasize, RSA *rsa_key)
     return true;
 }
 
-uint8_t* SRUP_Crypto::_Decrypt(RSA *rsa_key)
+uint8_t* SRUP_Crypto::_decrypt(RSA *rsa_key)
 {
     EVP_CIPHER_CTX* ctx;
     EVP_PKEY *pkey;
-    uint8_t* evp_key = nullptr;
+    uint8_t* evp_key;
 
     int evp_key_len;
     int iv_len;
@@ -352,7 +350,7 @@ uint8_t* SRUP_Crypto::SignF(unsigned char *data, size_t datasize, char *keyfile)
     key = getPrivateKeyF(keyfile);
 
     if (key!= nullptr)
-        return _Sign(data, datasize, key);
+        return _sign(data, datasize, key);
     else
         return nullptr;
 }
@@ -361,7 +359,7 @@ uint8_t* SRUP_Crypto::Sign(unsigned char *data, size_t datasize, char *key_strin
 {
     RSA* key;
     key = getPrivateKey(key_string);
-    return _Sign(data, datasize, key);
+    return _sign(data, datasize, key);
 }
 
 bool SRUP_Crypto::VerifyF(unsigned char *data, size_t datasize, char *keyfile)
@@ -369,7 +367,7 @@ bool SRUP_Crypto::VerifyF(unsigned char *data, size_t datasize, char *keyfile)
     RSA* key;
     key = getPubKeyF(keyfile);
     if (key != nullptr)
-        return _Verify(data, datasize, key);
+        return _verify(data, datasize, key);
     else
         return false;
 }
@@ -378,7 +376,7 @@ bool SRUP_Crypto::Verify(unsigned char *data, size_t datasize, char *key_string)
 {
     RSA *key;
     key = getPubKey(key_string);
-    return _Verify(data, datasize, key);
+    return _verify(data, datasize, key);
 }
 
 bool SRUP_Crypto::EncryptF(uint8_t *data, int input_datasize, char *keyfile)
@@ -386,7 +384,7 @@ bool SRUP_Crypto::EncryptF(uint8_t *data, int input_datasize, char *keyfile)
     RSA* key;
     key = getPubKeyF(keyfile);
     if (key != nullptr)
-        return _Encrypt(data, input_datasize, key);
+        return _encrypt(data, input_datasize, key);
     else
         return false;
 }
@@ -395,7 +393,7 @@ bool SRUP_Crypto::Encrypt(uint8_t *data, int input_datasize, char *key_string)
 {
     RSA* key;
     key = getPubKey(key_string);
-    return _Encrypt(data, input_datasize, key);
+    return _encrypt(data, input_datasize, key);
 }
 
 uint8_t* SRUP_Crypto::DecryptF(char *keyfile)
@@ -403,7 +401,7 @@ uint8_t* SRUP_Crypto::DecryptF(char *keyfile)
     RSA* key;
     key = getPrivateKeyF(keyfile);
     if (key != nullptr)
-        return _Decrypt(key);
+        return _decrypt(key);
     else
         return nullptr;
 }
@@ -412,11 +410,11 @@ uint8_t* SRUP_Crypto::Decrypt(char *key_string)
 {
     RSA* key;
     key = getPrivateKey(key_string);
-    return _Decrypt(key);
+    return _decrypt(key);
 }
 
 
-uint16_t SRUP_Crypto::sigLen()
+uint16_t SRUP_Crypto::sigLen() const
 {
     return (uint16_t) m_sig_length;
 }
@@ -428,8 +426,7 @@ uint8_t* SRUP_Crypto::signature()
 
 void SRUP_Crypto::signature(uint8_t *signature, uint16_t sig_len)
 {
-    if (m_signature != nullptr)
-        delete(m_signature);
+    delete[] m_signature;
     m_signature = new unsigned char [sig_len];
     std::memcpy(m_signature, signature, sig_len);
     m_sig_length = sig_len;
@@ -437,8 +434,7 @@ void SRUP_Crypto::signature(uint8_t *signature, uint16_t sig_len)
 
 void SRUP_Crypto::crypt(uint8_t *data, uint16_t data_len)
 {
-    if (m_crypt != nullptr)
-        delete(m_crypt);
+    delete[] m_crypt;
     m_crypt = new unsigned char [data_len];
     std::memcpy(m_crypt, data, data_len);
     m_crypt_length = data_len;
@@ -449,7 +445,7 @@ uint8_t* SRUP_Crypto::crypt()
     return m_crypt;
 }
 
-uint16_t SRUP_Crypto::cryptLen()
+uint16_t SRUP_Crypto::cryptLen() const
 {
     return m_crypt_length;
 }

@@ -9,10 +9,10 @@
 #include <boost/python.hpp>
 #include <string>
 
-void set_url(SRUP_MSG_INIT&, std::string);
+void set_url(SRUP_MSG_INIT&, const std::string&);
 boost::python::object get_url(SRUP_MSG_INIT&);
 
-void set_digest(SRUP_MSG_INIT&, std::string);
+void set_digest(SRUP_MSG_INIT&, const std::string&);
 boost::python::object get_digest(SRUP_MSG_INIT&);
 
 #endif //SRUP_TESTS_PYSRUP_INITIATE_H

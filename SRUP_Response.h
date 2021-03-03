@@ -72,18 +72,18 @@ class SRUP_MSG_RESPONSE : public  SRUP_MSG
 
 public:
     SRUP_MSG_RESPONSE();
-    ~SRUP_MSG_RESPONSE();
+    ~SRUP_MSG_RESPONSE() override;
 
-    uint8_t * Serialized();
-    bool DeSerialize(const uint8_t *);
-    uint32_t SerializedLength();
+    uint8_t * Serialized() override;
+    bool DeSerialize(const uint8_t *) override;
+    uint32_t SerializedLength() override;
 
-    bool status(const uint8_t);
+    bool status(uint8_t);
     uint8_t * status();
 
 protected:
-    bool Serialize(bool optional = false);
-    bool DataCheck();
+    bool Serialize(bool) override;
+    bool DataCheck() override;
     uint8_t* m_status;
 
 
