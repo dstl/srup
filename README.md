@@ -18,4 +18,4 @@ Further details of the protocol may be found in the papers:
 
 * Enabling Secure Guest Access for Command-and-Control of Internet of Things Devices (published in Volume 2, issue 2 of the Journal 'IoT') -  https://www.mdpi.com/2624-831X/2/2/13
 
-The latest release of the source code can be accessed via [![DOI](https://zenodo.org/badge/62746329.svg)](https://zenodo.org/badge/latestdoi/62746329) 
+The latest release of the source code can be accessed via [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4575539.svg)](https://zenodo.org/badge/latestdoi/62746329) 
