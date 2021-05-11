@@ -14,4 +14,8 @@ Further details of the protocol may be found in the papers:
 
 * pySRUP – Simplifying Secure Communications for Command & Control in the Internet of Things (published at the 5th IEEE World Forum on the Internet of Things, 15-18 April 2019) - https://ieeexplore.ieee.org/document/8767205
 
+* Enabling the Secure Use of Dynamic Identity for the Internet of Things—Using the Secure Remote Update Protocol (published in Volume 12, issue 8 of the Journal 'Future Internet') - https://www.mdpi.com/1999-5903/12/8/138
+
+* Enabling Secure Guest Access for Command-and-Control of Internet of Things Devices (published in Volume 2, issue 2 of the Journal 'IoT') -  https://www.mdpi.com/2624-831X/2/2/13
+
 The latest release of the source code can be accessed via [![DOI](https://zenodo.org/badge/62746329.svg)](https://zenodo.org/badge/latestdoi/62746329) 
