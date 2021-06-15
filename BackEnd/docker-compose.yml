@@ -1,0 +1,22 @@
+version: '3'
+
+services:
+  web:
+    image: nginx:latest
+    container_name: srup_web
+    ports:
+     - "80:80"
+    volumes:
+     - ./logs/:/var/log/nginx/
+     - ./certs/:/etc/certs/
+     - ./config.conf:/etc/nginx/nginx.conf
+       #- ./html/:/usr/share/nginx/html/
+       #- ./shared_volume/:/usr/share/nginx/html/media/
+    depends_on:
+     - keyex
+
+  keyex:
+    image: ajpoulter/srup_keyex:latest
+    container_name: srup_keyex
+    expose:
+     - "8003"
