@@ -22,6 +22,6 @@ Further details of the protocol may be found in the papers:
 
 * Secure Messaging, Key Management & Device Identity for the IoT (presentation to IoT Security Foundation Conference, November 2019) – https://youtu.be/vdjY617WvHo 
 
-* The Secure Remote Update Protocol in Action – Video demonstration – Selected Presentations – https://youtu.be/F0_qlqh0Oiw
+* The Secure Remote Update Protocol in Action – Video demonstration – https://youtu.be/F0_qlqh0Oiw
 
 The latest release of the source code can be accessed via [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4575539.svg)](https://zenodo.org/badge/latestdoi/62746329) 
